@@ -59,6 +59,7 @@ def add_mod(slug_or_id):
     mod_info = get_modrinth_data("/project/" + slug_or_id)
     mod_name = mod_info["title"]
     mod_id = mod_info["id"]
+    mod_slug = mod_info["slug"]
 
     # TODO: Check if the mod already exists
 
@@ -74,6 +75,7 @@ def add_mod(slug_or_id):
 
     new_mod = {
         "mod_name": mod_name,
+        "mod_slug": mod_slug,
         "mod_id": mod_id,
         "mod_version_id": mod_version_id,
         "filename": filename,
@@ -91,6 +93,32 @@ def add_mod(slug_or_id):
     print("Mod successfully added")
 
 
+def remove_mod(slug_or_id):
+    print("Removing mod...")
+
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        mods = data["mods"]
+
+    for i, mod in enumerate(mods):
+
+        if mod["mod_id"] == slug_or_id or mod["mod_slug"] == slug_or_id:
+
+            mod_name = mod["mod_name"]
+
+            os.remove(os.path.join("mods", mod["filename"]))
+
+            mods.pop(i)
+
+            with open("mcmodmanager.json", "w") as file:
+                json.dump(data, file)
+
+            print("Successfully removed " + mod_name)
+            return
+
+    print("Mod not found")
+
+
 def main():
     init_json_file()
 
@@ -98,6 +126,8 @@ def main():
         set_server_version(sys.argv[2])
     elif sys.argv[1] == "-a":
         add_mod(sys.argv[2])
+    elif sys.argv[1] == "-r":
+        remove_mod(sys.argv[2])
 
 
 if __name__ == "__main__":
