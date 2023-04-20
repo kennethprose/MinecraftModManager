@@ -17,6 +17,7 @@ def get_modrinth_data(endpoint):
 
 
 def download_mod(url, filename):
+    print("Downloading " + filename)
     if not os.path.exists("mods"):
         os.makedirs("mods")
     filepath = os.path.join("mods", filename)
@@ -50,7 +51,26 @@ def set_server_version(version):
         json.dump(data, file)
 
 
+def check_mod_exists(slug_or_id):
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        server_version = data["server_version"]
+        mods = data["mods"]
+
+    for i, mod in enumerate(mods):
+
+        if mod["mod_id"] == slug_or_id or mod["mod_slug"] == slug_or_id:
+            return True
+
+    return False
+
+
 def add_mod(slug_or_id):
+
+    if check_mod_exists(slug_or_id):
+        print("Mod is already installed")
+        exit()
+
     with open("mcmodmanager.json", "r") as file:
         data = json.load(file)
         server_version = data["server_version"]
@@ -60,8 +80,6 @@ def add_mod(slug_or_id):
     mod_name = mod_info["title"]
     mod_id = mod_info["id"]
     mod_slug = mod_info["slug"]
-
-    # TODO: Check if the mod already exists
 
     print("Adding mod: " + mod_name)
 
@@ -90,7 +108,7 @@ def add_mod(slug_or_id):
     with open("mcmodmanager.json", "w") as file:
         json.dump(data, file)
 
-    print("Mod successfully added")
+    print(mod_name + " installed")
 
 
 def remove_mod(slug_or_id):
