@@ -137,15 +137,38 @@ def remove_mod(slug_or_id):
     print("Mod not found")
 
 
+def print_usage():
+    print('''
+    Usage: python mcmodmanager.py [OPTIONS]
+
+    Options:
+    -s, --server-version VERSION        Change the stored value of your Minecraft server version to VERSION.
+    -a, --add-mod ID|Slug               Install the mod with the specified ID or slug.
+    -r, --remove-mod ID|Slug            Remove the mod with the specified ID or slug.
+    ''')
+
+
 def main():
     init_json_file()
 
-    if sys.argv[1] == "-s":
-        set_server_version(sys.argv[2])
-    elif sys.argv[1] == "-a":
-        add_mod(sys.argv[2])
-    elif sys.argv[1] == "-r":
-        remove_mod(sys.argv[2])
+    if len(sys.argv) > 1:
+
+        match sys.argv[1]:
+            case "-a":
+                add_mod(sys.argv[2])
+            case "--add-mod":
+                add_mod(sys.argv[2])
+            case "-r":
+                remove_mod(sys.argv[2])
+            case "--remove-mod":
+                remove_mod(sys.argv[2])
+            case "-s":
+                set_server_version(sys.argv[2])
+            case "--server-version":
+                set_server_version(sys.argv[2])
+
+    else:
+        print_usage()
 
 
 if __name__ == "__main__":
