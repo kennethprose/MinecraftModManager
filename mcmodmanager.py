@@ -4,7 +4,7 @@ import requests
 import sys
 
 
-def get_modrinth_data(endpoint):
+def modrinth_api_call(endpoint):
     base_url = "https://api.modrinth.com/v2"
     url = base_url + endpoint
     response = requests.get(url)
@@ -36,19 +36,35 @@ def init_json_file():
         print("[ERROR] Could not find mcmodmanager.json")
         with open("mcmodmanager.json", "w") as file:
             data = {"mods": []}
-            json.dump(data, file)
+            json.dump(data, file, indent=4)
         print("mcmodmanager.json has been created.")
         exit()
 
 
+def check_version_exists(version):
+
+    valid_versions = modrinth_api_call("/tag/game_version")
+
+    for v in valid_versions:
+        if v["version"] == version:
+            return True
+
+    return False
+
+
 def set_server_version(version):
+
+    if not check_version_exists(version):
+        print("[ERROR]: " + version + " is not a valid Minecraft version")
+        exit()
+
     with open("mcmodmanager.json", "r") as file:
         data = json.load(file)
 
     data["server_version"] = version
 
     with open("mcmodmanager.json", "w") as file:
-        json.dump(data, file)
+        json.dump(data, file, indent=4)
 
 
 def check_mod_exists(slug_or_id):
@@ -76,14 +92,14 @@ def add_mod(slug_or_id):
         server_version = data["server_version"]
         mods = data["mods"]
 
-    mod_info = get_modrinth_data("/project/" + slug_or_id)
+    mod_info = modrinth_api_call("/project/" + slug_or_id)
     mod_name = mod_info["title"]
     mod_id = mod_info["id"]
     mod_slug = mod_info["slug"]
 
     print("Adding mod: " + mod_name)
 
-    mod_versions = get_modrinth_data(
+    mod_versions = modrinth_api_call(
         "/project/" + slug_or_id + "/version?game_versions=[\"" + server_version + "\"]&loaders=[\"fabric\"]")
 
     most_recent_version = mod_versions[0]
@@ -106,7 +122,7 @@ def add_mod(slug_or_id):
     download_mod(download_url, filename)
 
     with open("mcmodmanager.json", "w") as file:
-        json.dump(data, file)
+        json.dump(data, file, indent=4)
 
     print(mod_name + " installed")
 
@@ -129,7 +145,7 @@ def remove_mod(slug_or_id):
             mods.pop(i)
 
             with open("mcmodmanager.json", "w") as file:
-                json.dump(data, file)
+                json.dump(data, file, indent=4)
 
             print("Successfully removed " + mod_name)
             return
@@ -137,14 +153,109 @@ def remove_mod(slug_or_id):
     print("Mod not found")
 
 
+def check_updates(version):
+
+    if not check_version_exists(version):
+        print("[ERROR]: " + version + " is not a valid Minecraft version")
+        exit()
+
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        server_version = data["server_version"]
+        mods = data["mods"]
+
+    mods_with_updates = []
+    mods_without_updates = []
+
+    if version == server_version:
+
+        for mod in mods:
+
+            mod_name = mod["mod_name"]
+            mod_slug = mod["mod_slug"]
+            mod_version_id = mod["mod_version_id"]
+
+            mod_versions = modrinth_api_call(
+                "/project/" + mod_slug + "/version?game_versions=[\"" + server_version + "\"]&loaders=[\"fabric\"]")
+            newest_mod_version = mod_versions[0]
+
+            if newest_mod_version["id"] != mod_version_id:
+
+                new_mod_version_id = newest_mod_version["id"]
+                new_mod_version_filename = newest_mod_version["files"][0]["filename"]
+                new_mod_version_url = newest_mod_version["files"][0]["url"]
+
+                update_info = {
+                    "new_version_id": new_mod_version_id,
+                    "new_filename": new_mod_version_filename,
+                    "new_download_url": new_mod_version_url,
+                    "new_version": server_version
+                }
+
+                mod["update"] = update_info
+
+                mods_with_updates.append(mod_name)
+
+            else:
+                mods_without_updates.append(mod_name)
+
+    else:
+
+        for mod in mods:
+
+            mod_name = mod["mod_name"]
+            mod_slug = mod["mod_slug"]
+
+            mod_versions = modrinth_api_call(
+                "/project/" + mod_slug + "/version?game_versions=[\"" + version + "\"]&loaders=[\"fabric\"]")
+
+            if len(mod_versions) > 0:
+
+                new_mod = mod_versions[0]
+
+                new_mod_id = new_mod["id"]
+                new_mod_filename = new_mod["files"][0]["filename"]
+                new_mod_url = new_mod["files"][0]["url"]
+
+                update_info = {
+                    "new_version_id": new_mod_id,
+                    "new_filename": new_mod_filename,
+                    "new_download_url": new_mod_url,
+                    "new_version": version
+                }
+
+                mod["update"] = update_info
+
+                mods_with_updates.append(mod_name)
+
+            else:
+                del mod["update"]
+
+                mods_without_updates.append(mod_name)
+
+    with open("mcmodmanager.json", "w") as file:
+        json.dump(data, file, indent=4)
+
+    print("\nUpdates available for:")
+    for mod in mods_with_updates:
+        print(mod)
+
+    print("\nNo updates for:")
+    for mod in mods_without_updates:
+        print(mod)
+    print()
+
+
 def print_usage():
     print('''
     Usage: python mcmodmanager.py [OPTIONS]
 
     Options:
-    -s, --server-version VERSION        Change the stored value of your Minecraft server version to VERSION.
     -a, --add-mod ID|Slug               Install the mod with the specified ID or slug.
+    -c, --check-updates VERSION         Check to see if mods have new versions available for specified Minecraft version. 
+    -h, --help                          Prints usage.
     -r, --remove-mod ID|Slug            Remove the mod with the specified ID or slug.
+    -s, --server-version VERSION        Change the stored value of your Minecraft server version to VERSION.
     ''')
 
 
@@ -154,17 +265,15 @@ def main():
     if len(sys.argv) > 1:
 
         match sys.argv[1]:
-            case "-a":
+            case "-a" | "--add-mod":
                 add_mod(sys.argv[2])
-            case "--add-mod":
-                add_mod(sys.argv[2])
-            case "-r":
+            case "-c" | "--check-updates":
+                check_updates(sys.argv[2])
+            case "-h" | "--help":
+                print_usage()
+            case "-r" | "--remove-mod":
                 remove_mod(sys.argv[2])
-            case "--remove-mod":
-                remove_mod(sys.argv[2])
-            case "-s":
-                set_server_version(sys.argv[2])
-            case "--server-version":
+            case "-s" | "--server-version":
                 set_server_version(sys.argv[2])
 
     else:
