@@ -229,7 +229,10 @@ def check_updates(version):
                 mods_with_updates.append(mod_name)
 
             else:
-                del mod["update"]
+                try:
+                    del mod["update"]
+                except:
+                    pass
 
                 mods_without_updates.append(mod_name)
 
@@ -246,6 +249,58 @@ def check_updates(version):
     print()
 
 
+def check_pending_updates():
+
+    pending_updates = 0
+
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        mods = data["mods"]
+
+    for mod in mods:
+        if "update" in mod:
+            pending_updates += 1
+
+    return pending_updates
+
+
+def remove_mods_without_updates():
+
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        mods = data["mods"]
+
+    mods_without_updates = []
+    for mod in mods:
+        if "update" not in mod:
+            mods_without_updates.append(mod["mod_slug"])
+
+    for mod_slug in mods_without_updates:
+        remove_mod(mod_slug)
+
+
+def update_mods(version):
+
+    pending_updates = check_pending_updates()
+
+    if pending_updates == 0:
+        print("\nThere are no pending updates.\nCheck for updates by using the -c flag.\nSee usage (-h) for more information.\n")
+        sys.exit()
+
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        mods = data["mods"]
+
+    if pending_updates < len(mods):
+
+        confirmation = input(
+            "\nAny mods that do not have pending updates will be removed. Do you want to proceed? (yes/no): ")
+        if confirmation.lower() != "yes":
+            sys.exit()
+
+        remove_mods_without_updates()
+
+
 def print_usage():
     print('''
     Usage: python mcmodmanager.py [OPTIONS]
@@ -256,6 +311,7 @@ def print_usage():
     -h, --help                          Prints usage.
     -r, --remove-mod ID|Slug            Remove the mod with the specified ID or slug.
     -s, --server-version VERSION        Change the stored value of your Minecraft server version to VERSION.
+    -u, --update-mods VERSION           Removes any mods without pending updates to the desired version and updates the rest
     ''')
 
 
@@ -275,6 +331,8 @@ def main():
                 remove_mod(sys.argv[2])
             case "-s" | "--server-version":
                 set_server_version(sys.argv[2])
+            case "-u" | "--update-mods":
+                update_mods(sys.argv[2])
 
     else:
         print_usage()
