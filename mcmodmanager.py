@@ -291,14 +291,43 @@ def update_mods(version):
         data = json.load(file)
         mods = data["mods"]
 
-    if pending_updates < len(mods):
+        if pending_updates < len(mods):
 
-        confirmation = input(
-            "\nAny mods that do not have pending updates will be removed. Do you want to proceed? (yes/no): ")
-        if confirmation.lower() != "yes":
-            sys.exit()
+            confirmation = input(
+                "\nAny mods that do not have pending updates will be removed. Do you want to proceed? (yes/no): ")
+            if confirmation.lower() != "yes":
+                sys.exit()
 
-        remove_mods_without_updates()
+            remove_mods_without_updates()
+
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        mods = data["mods"]
+
+        for mod in mods:
+
+            # Remove old file
+            os.remove(os.path.join("mods", mod["filename"]))
+
+            # Download new file
+            download_mod(mod["update"]["new_download_url"],
+                         mod["update"]["new_filename"])
+
+            # Copy 'update' data to primary data variables
+            mod["mod_version_id"] = mod["update"]["new_version_id"]
+            mod["filename"] = mod["update"]["new_filename"]
+            mod["download_url"] = mod["update"]["new_download_url"]
+            mod["current_version"] = mod["update"]["new_version"]
+
+            # Remove pending update data
+            del mod["update"]
+
+            print(mod["mod_name"] + " has been updated")
+
+    with open("mcmodmanager.json", "w") as file:
+        json.dump(data, file, indent=4)
+
+    set_server_version(version)
 
 
 def print_usage():
