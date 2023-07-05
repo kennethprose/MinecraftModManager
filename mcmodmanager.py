@@ -16,6 +16,20 @@ def modrinth_api_call(endpoint):
         return None
 
 
+def curseforge_api_call(endpoint):
+    base_url = "https://api.curseforge.com"
+    url = base_url + endpoint
+    headers = {
+        "x-api-key": curseforge_api_key}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print("Error fetching data from CurseForge API. Status code: ",
+              response.status_code)
+        return None
+
+
 def download_mod(url, filename):
     print("Downloading " + filename)
     if not os.path.exists("mods"):
@@ -41,6 +55,14 @@ def init_json_file():
         exit()
 
 
+def init_api_key():
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+
+    global curseforge_api_key
+    curseforge_api_key = data["curseforge_api_key"]
+
+
 def check_version_exists(version):
 
     valid_versions = modrinth_api_call("/tag/game_version")
@@ -62,6 +84,15 @@ def set_server_version(version):
         data = json.load(file)
 
     data["server_version"] = version
+
+    with open("mcmodmanager.json", "w") as file:
+        json.dump(data, file, indent=4)
+
+
+def set_curseforge_api_key(key):
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        data["curseforge_api_key"] = key
 
     with open("mcmodmanager.json", "w") as file:
         json.dump(data, file, indent=4)
@@ -338,6 +369,7 @@ def print_usage():
     -a, --add-mod ID|Slug               Install the mod with the specified ID or slug.
     -c, --check-updates VERSION         Check to see if mods have new versions available for specified Minecraft version. 
     -h, --help                          Prints usage.
+    -k, --api-key                       Set the API key that is required for CurseForge
     -r, --remove-mod ID|Slug            Remove the mod with the specified ID or slug.
     -s, --server-version VERSION        Change the stored value of your Minecraft server version to VERSION.
     -u, --update-mods VERSION           Removes any mods without pending updates to the desired version and updates the rest
@@ -346,6 +378,7 @@ def print_usage():
 
 def main():
     init_json_file()
+    init_api_key()
 
     if len(sys.argv) > 1:
 
@@ -356,6 +389,8 @@ def main():
                 check_updates(sys.argv[2])
             case "-h" | "--help":
                 print_usage()
+            case "-k" | "--api-key":
+                set_curseforge_api_key(sys.argv[2])
             case "-r" | "--remove-mod":
                 remove_mod(sys.argv[2])
             case "-s" | "--server-version":
