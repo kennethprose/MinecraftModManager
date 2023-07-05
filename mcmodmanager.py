@@ -112,7 +112,7 @@ def check_mod_exists(slug_or_id):
     return False
 
 
-def add_mod(slug_or_id):
+def add_mod(source, slug_or_id):
 
     if check_mod_exists(slug_or_id):
         print("Mod is already installed")
@@ -123,20 +123,36 @@ def add_mod(slug_or_id):
         server_version = data["server_version"]
         mods = data["mods"]
 
-    mod_info = modrinth_api_call("/project/" + slug_or_id)
-    mod_name = mod_info["title"]
-    mod_id = mod_info["id"]
-    mod_slug = mod_info["slug"]
+    if source == 'modrinth':
+        mod_info = modrinth_api_call("/project/" + slug_or_id)
+        mod_name = mod_info["title"]
+        mod_id = mod_info["id"]
+        mod_slug = mod_info["slug"]
+    elif source == 'curseforge':
+        mod_info = curseforge_api_call("/v1/mods/" + slug_or_id)
+        mod_name = mod_info["data"]["name"]
+        mod_id = mod_info["data"]["id"]
+        mod_slug = mod_info["data"]["slug"]
 
     print("Adding mod: " + mod_name)
 
-    mod_versions = modrinth_api_call(
-        "/project/" + slug_or_id + "/version?game_versions=[\"" + server_version + "\"]&loaders=[\"fabric\"]")
+    if source == 'modrinth':
+        mod_versions = modrinth_api_call(
+            "/project/" + slug_or_id + "/version?game_versions=[\"" + server_version + "\"]&loaders=[\"fabric\"]")
 
-    most_recent_version = mod_versions[0]
-    mod_version_id = most_recent_version["id"]
-    filename = most_recent_version["files"][0]["filename"]
-    download_url = most_recent_version["files"][0]["url"]
+        most_recent_version = mod_versions[0]
+        mod_version_id = most_recent_version["id"]
+        filename = most_recent_version["files"][0]["filename"]
+        download_url = most_recent_version["files"][0]["url"]
+
+    elif source == 'curseforge':
+        mod_versions = curseforge_api_call(
+            "/v1/mods/" + slug_or_id + "/files?gameVersion=" + server_version + "&modLoaderType=4")
+
+        most_recent_version = mod_versions["data"][0]
+        mod_version_id = most_recent_version["id"]
+        filename = most_recent_version["fileName"]
+        download_url = most_recent_version["downloadUrl"]
 
     new_mod = {
         "mod_name": mod_name,
@@ -145,7 +161,8 @@ def add_mod(slug_or_id):
         "mod_version_id": mod_version_id,
         "filename": filename,
         "download_url": download_url,
-        "current_version": server_version
+        "current_version": server_version,
+        "source": source
     }
 
     mods.append(new_mod)
@@ -366,13 +383,13 @@ def print_usage():
     Usage: python mcmodmanager.py [OPTIONS]
 
     Options:
-    -a, --add-mod ID|Slug               Install the mod with the specified ID or slug.
-    -c, --check-updates VERSION         Check to see if mods have new versions available for specified Minecraft version. 
+    -a, --add-mod [Source] [ID|Slug]    Fetch and install the mod with the given ID or slug from the desired source (Modrinth or CurseForge).
+    -c, --check-updates [VERSION]       Check to see if mods have new versions available for specified Minecraft version. 
     -h, --help                          Prints usage.
     -k, --api-key                       Set the API key that is required for CurseForge
-    -r, --remove-mod ID|Slug            Remove the mod with the specified ID or slug.
-    -s, --server-version VERSION        Change the stored value of your Minecraft server version to VERSION.
-    -u, --update-mods VERSION           Removes any mods without pending updates to the desired version and updates the rest
+    -r, --remove-mod [ID|Slug]          Remove the mod with the specified ID or slug.
+    -s, --server-version [VERSION]      Change the stored value of your Minecraft server version to VERSION.
+    -u, --update-mods [VERSION]         Removes any mods without pending updates to the desired version and updates the rest
     ''')
 
 
@@ -384,7 +401,7 @@ def main():
 
         match sys.argv[1]:
             case "-a" | "--add-mod":
-                add_mod(sys.argv[2])
+                add_mod(sys.argv[2], sys.argv[3])
             case "-c" | "--check-updates":
                 check_updates(sys.argv[2])
             case "-h" | "--help":
