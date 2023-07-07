@@ -131,7 +131,7 @@ def add_mod(source, slug_or_id):
     elif source == 'curseforge':
         mod_info = curseforge_api_call("/v1/mods/" + slug_or_id)
         mod_name = mod_info["data"]["name"]
-        mod_id = mod_info["data"]["id"]
+        mod_id = str(mod_info["data"]["id"])
         mod_slug = mod_info["data"]["slug"]
 
     print("Adding mod: " + mod_name)
@@ -150,7 +150,7 @@ def add_mod(source, slug_or_id):
             "/v1/mods/" + slug_or_id + "/files?gameVersion=" + server_version + "&modLoaderType=4")
 
         most_recent_version = mod_versions["data"][0]
-        mod_version_id = most_recent_version["id"]
+        mod_version_id = str(most_recent_version["id"])
         filename = most_recent_version["fileName"]
         download_url = most_recent_version["downloadUrl"]
 
@@ -201,6 +201,52 @@ def remove_mod(slug_or_id):
     print("Mod not found")
 
 
+def get_modrinth_mod_info(mod_slug, version, mod_version_id=None):
+
+    mod_versions = modrinth_api_call(
+        f"/project/{mod_slug}/version?game_versions=[\"{version}\"]&loaders=[\"fabric\"]")
+
+    newest_mod_version = mod_versions[0]
+
+    if not mod_version_id or newest_mod_version["id"] != mod_version_id:
+
+        new_mod_version_id = newest_mod_version["id"]
+        new_mod_version_filename = newest_mod_version["files"][0]["filename"]
+        new_mod_version_url = newest_mod_version["files"][0]["url"]
+
+        return {
+            "new_version_id": new_mod_version_id,
+            "new_filename": new_mod_version_filename,
+            "new_download_url": new_mod_version_url,
+            "new_version": version
+        }
+
+    return None
+
+
+def get_curseforge_mod_info(mod_id, version, mod_version_id=None):
+
+    mod_versions = curseforge_api_call(
+        f"/v1/mods/{mod_id}/files?gameVersion={version}&modLoaderType=4")
+
+    newest_mod_version = mod_versions["data"][0]
+
+    if not mod_version_id or str(newest_mod_version["id"]) != mod_version_id:
+
+        new_mod_version_id = str(newest_mod_version["id"])
+        new_mod_version_filename = newest_mod_version["fileName"]
+        new_mod_version_url = newest_mod_version["downloadUrl"]
+
+        return {
+            "new_version_id": new_mod_version_id,
+            "new_filename": new_mod_version_filename,
+            "new_download_url": new_mod_version_url,
+            "new_version": version
+        }
+
+    return None
+
+
 def check_updates(version):
 
     if not check_version_exists(version):
@@ -221,30 +267,25 @@ def check_updates(version):
 
             mod_name = mod["mod_name"]
             mod_slug = mod["mod_slug"]
+            mod_id = mod["mod_id"]
             mod_version_id = mod["mod_version_id"]
+            mod_source = mod["source"]
 
-            mod_versions = modrinth_api_call(
-                "/project/" + mod_slug + "/version?game_versions=[\"" + server_version + "\"]&loaders=[\"fabric\"]")
-            newest_mod_version = mod_versions[0]
+            if mod_source == 'modrinth':
+                update_info = get_modrinth_mod_info(
+                    mod_slug, server_version, mod_version_id)
+            elif mod_source == 'curseforge':
+                update_info = get_curseforge_mod_info(
+                    mod_id, server_version, mod_version_id)
 
-            if newest_mod_version["id"] != mod_version_id:
-
-                new_mod_version_id = newest_mod_version["id"]
-                new_mod_version_filename = newest_mod_version["files"][0]["filename"]
-                new_mod_version_url = newest_mod_version["files"][0]["url"]
-
-                update_info = {
-                    "new_version_id": new_mod_version_id,
-                    "new_filename": new_mod_version_filename,
-                    "new_download_url": new_mod_version_url,
-                    "new_version": server_version
-                }
-
+            if update_info:
                 mod["update"] = update_info
-
                 mods_with_updates.append(mod_name)
-
             else:
+                try:
+                    del mod["update"]
+                except KeyError:
+                    pass
                 mods_without_updates.append(mod_name)
 
     else:
@@ -253,35 +294,22 @@ def check_updates(version):
 
             mod_name = mod["mod_name"]
             mod_slug = mod["mod_slug"]
+            mod_id = mod["mod_id"]
+            mod_source = mod["source"]
 
-            mod_versions = modrinth_api_call(
-                "/project/" + mod_slug + "/version?game_versions=[\"" + version + "\"]&loaders=[\"fabric\"]")
+            if mod_source == 'modrinth':
+                update_info = get_modrinth_mod_info(mod_slug, version)
+            elif mod_source == 'curseforge':
+                update_info = get_curseforge_mod_info(mod_id, version)
 
-            if len(mod_versions) > 0:
-
-                new_mod = mod_versions[0]
-
-                new_mod_id = new_mod["id"]
-                new_mod_filename = new_mod["files"][0]["filename"]
-                new_mod_url = new_mod["files"][0]["url"]
-
-                update_info = {
-                    "new_version_id": new_mod_id,
-                    "new_filename": new_mod_filename,
-                    "new_download_url": new_mod_url,
-                    "new_version": version
-                }
-
+            if update_info:
                 mod["update"] = update_info
-
                 mods_with_updates.append(mod_name)
-
             else:
                 try:
                     del mod["update"]
-                except:
+                except KeyError:
                     pass
-
                 mods_without_updates.append(mod_name)
 
     with open("mcmodmanager.json", "w") as file:

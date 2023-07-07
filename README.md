@@ -1,6 +1,6 @@
 # Minecraft Mod Manager
 
-Minecraft Mod Manager is a Python script that allows you to keep track of all the mods installed on your Minecraft server. It leverages the Modrinth website to add, remove, and update mods seamlessly.
+Minecraft Mod Manager is a Python script that allows you to keep track of all the mods installed on your Minecraft server. It leverages the Modrinth and CurseForge websites to add, remove, and update mods seamlessly.
 
 ## Features
 
@@ -21,7 +21,7 @@ The script provides several command-line options for managing your Minecraft mod
 | Option                   | Required Value(s)       | Description                                                                                           |
 | ------------------------ | ----------------------- | ----------------------------------------------------------------------------------------------------- |
 | `-a`, `--add-mod`        | [Source] [ModID/Slug]\* | Fetch and install the mod with the given ID or slug from the desired source (Modrinth or CurseForge). |
-| `-r`, `--remove-mod`     | [ModID/Slug]\*          | Remove the mod with the specified ID or slug.                                                         |
+| `-r`, `--remove-mod`     | [ModID/Slug]            | Remove the mod with the specified ID or slug.                                                         |
 | `-c`, `--check-updates`  | [VERSION]               | Check to see which mods have new versions available for specified Minecraft version.                  |
 | `-u`, `--update-mods`    | [VERSION]               | Updates mods to desired version.                                                                      |
 | `-s`, `--server-version` | [VERSION]               | Change the stored value of your Minecraft server version. (Used when adding new mods)                 |
