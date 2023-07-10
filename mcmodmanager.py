@@ -206,20 +206,21 @@ def get_modrinth_mod_info(mod_slug, version, mod_version_id=None):
     mod_versions = modrinth_api_call(
         f"/project/{mod_slug}/version?game_versions=[\"{version}\"]&loaders=[\"fabric\"]")
 
-    newest_mod_version = mod_versions[0]
+    if mod_versions:
+        newest_mod_version = mod_versions[0]
 
-    if not mod_version_id or newest_mod_version["id"] != mod_version_id:
+        if not mod_version_id or newest_mod_version["id"] != mod_version_id:
 
-        new_mod_version_id = newest_mod_version["id"]
-        new_mod_version_filename = newest_mod_version["files"][0]["filename"]
-        new_mod_version_url = newest_mod_version["files"][0]["url"]
+            new_mod_version_id = newest_mod_version["id"]
+            new_mod_version_filename = newest_mod_version["files"][0]["filename"]
+            new_mod_version_url = newest_mod_version["files"][0]["url"]
 
-        return {
-            "new_version_id": new_mod_version_id,
-            "new_filename": new_mod_version_filename,
-            "new_download_url": new_mod_version_url,
-            "new_version": version
-        }
+            return {
+                "new_version_id": new_mod_version_id,
+                "new_filename": new_mod_version_filename,
+                "new_download_url": new_mod_version_url,
+                "new_version": version
+            }
 
     return None
 
@@ -229,20 +230,21 @@ def get_curseforge_mod_info(mod_id, version, mod_version_id=None):
     mod_versions = curseforge_api_call(
         f"/v1/mods/{mod_id}/files?gameVersion={version}&modLoaderType=4")
 
-    newest_mod_version = mod_versions["data"][0]
+    if mod_versions:
+        newest_mod_version = mod_versions["data"][0]
 
-    if not mod_version_id or str(newest_mod_version["id"]) != mod_version_id:
+        if not mod_version_id or str(newest_mod_version["id"]) != mod_version_id:
 
-        new_mod_version_id = str(newest_mod_version["id"])
-        new_mod_version_filename = newest_mod_version["fileName"]
-        new_mod_version_url = newest_mod_version["downloadUrl"]
+            new_mod_version_id = str(newest_mod_version["id"])
+            new_mod_version_filename = newest_mod_version["fileName"]
+            new_mod_version_url = newest_mod_version["downloadUrl"]
 
-        return {
-            "new_version_id": new_mod_version_id,
-            "new_filename": new_mod_version_filename,
-            "new_download_url": new_mod_version_url,
-            "new_version": version
-        }
+            return {
+                "new_version_id": new_mod_version_id,
+                "new_filename": new_mod_version_filename,
+                "new_download_url": new_mod_version_url,
+                "new_version": version
+            }
 
     return None
 
@@ -325,7 +327,7 @@ def check_updates(version):
     print()
 
 
-def check_pending_updates():
+def check_pending_updates(version):
 
     pending_updates = 0
 
@@ -335,7 +337,8 @@ def check_pending_updates():
 
     for mod in mods:
         if "update" in mod:
-            pending_updates += 1
+            if mod["update"]["new_version"] == version:
+                pending_updates += 1
 
     return pending_updates
 
@@ -357,7 +360,7 @@ def remove_mods_without_updates():
 
 def update_mods(version):
 
-    pending_updates = check_pending_updates()
+    pending_updates = check_pending_updates(version)
 
     if pending_updates == 0:
         print("\nThere are no pending updates.\nCheck for updates by using the -c flag.\nSee usage (-h) for more information.\n")
@@ -366,8 +369,9 @@ def update_mods(version):
     with open("mcmodmanager.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
+        server_version = data["server_version"]
 
-        if pending_updates < len(mods):
+        if server_version != version and pending_updates < len(mods):
 
             confirmation = input(
                 "\nAny mods that do not have pending updates will be removed. Do you want to proceed? (yes/no): ")
@@ -381,24 +385,24 @@ def update_mods(version):
         mods = data["mods"]
 
         for mod in mods:
+            if "update" in mod:
+                # Remove old file
+                os.remove(os.path.join("mods", mod["filename"]))
 
-            # Remove old file
-            os.remove(os.path.join("mods", mod["filename"]))
+                # Download new file
+                download_mod(mod["update"]["new_download_url"],
+                             mod["update"]["new_filename"])
 
-            # Download new file
-            download_mod(mod["update"]["new_download_url"],
-                         mod["update"]["new_filename"])
+                # Copy 'update' data to primary data variables
+                mod["mod_version_id"] = mod["update"]["new_version_id"]
+                mod["filename"] = mod["update"]["new_filename"]
+                mod["download_url"] = mod["update"]["new_download_url"]
+                mod["current_version"] = mod["update"]["new_version"]
 
-            # Copy 'update' data to primary data variables
-            mod["mod_version_id"] = mod["update"]["new_version_id"]
-            mod["filename"] = mod["update"]["new_filename"]
-            mod["download_url"] = mod["update"]["new_download_url"]
-            mod["current_version"] = mod["update"]["new_version"]
+                # Remove pending update data
+                del mod["update"]
 
-            # Remove pending update data
-            del mod["update"]
-
-            print(mod["mod_name"] + " has been updated")
+                print(mod["mod_name"] + " has been updated")
 
     with open("mcmodmanager.json", "w") as file:
         json.dump(data, file, indent=4)
