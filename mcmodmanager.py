@@ -2,6 +2,13 @@ import json
 import os
 import requests
 import sys
+import datetime
+
+
+def message(message=""):
+    current_time = datetime.datetime.now()
+    formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{formatted_time}] {message}")
 
 
 def modrinth_api_call(endpoint):
@@ -11,8 +18,8 @@ def modrinth_api_call(endpoint):
     if response.status_code == 200:
         return response.json()
     else:
-        print("Error fetching data from Modrinth API. Status code: ",
-              response.status_code)
+        message("Error fetching data from Modrinth API. Status code: " +
+                str(response.status_code))
         return None
 
 
@@ -25,13 +32,14 @@ def curseforge_api_call(endpoint):
     if response.status_code == 200:
         return response.json()
     else:
-        print("Error fetching data from CurseForge API. Status code: ",
-              response.status_code)
+        message(
+            "Error fetching data from CurseForge API. Status code: " + str(response.status_code))
         return None
 
 
 def download_mod(url, filename):
-    print("Downloading " + filename)
+    if debug_mode:
+        message("Downloading " + filename)
     if not os.path.exists("mods"):
         os.makedirs("mods")
     filepath = os.path.join("mods", filename)
@@ -40,18 +48,19 @@ def download_mod(url, filename):
         with open(filepath, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
-    print("Downloaded " + filename)
+    if debug_mode:
+        message("Downloaded " + filename)
 
 
 def init_json_file():
     if os.path.exists("mcmodmanager.json"):
         return
     else:
-        print("[ERROR] Could not find mcmodmanager.json")
+        message("[ERROR] Could not find mcmodmanager.json")
         with open("mcmodmanager.json", "w") as file:
             data = {"mods": []}
             json.dump(data, file, indent=4)
-        print("mcmodmanager.json has been created.")
+        message("mcmodmanager.json has been created.")
         exit()
 
 
@@ -77,7 +86,7 @@ def check_version_exists(version):
 def set_server_version(version):
 
     if not check_version_exists(version):
-        print("[ERROR]: " + version + " is not a valid Minecraft version")
+        message("[ERROR]: " + version + " is not a valid Minecraft version")
         exit()
 
     with open("mcmodmanager.json", "r") as file:
@@ -114,7 +123,7 @@ def check_mod_exists(slug_or_id):
 def add_mod(source, slug_or_id):
 
     if check_mod_exists(slug_or_id):
-        print("Mod is already installed")
+        message("Mod is already installed")
         exit()
 
     with open("mcmodmanager.json", "r") as file:
@@ -133,7 +142,8 @@ def add_mod(source, slug_or_id):
         mod_id = str(mod_info["data"]["id"])
         mod_slug = mod_info["data"]["slug"]
 
-    print("Adding mod: " + mod_name)
+    if debug_mode:
+        message("Adding mod: " + mod_name)
 
     if source == 'modrinth':
         mod_versions = modrinth_api_call(
@@ -171,11 +181,12 @@ def add_mod(source, slug_or_id):
     with open("mcmodmanager.json", "w") as file:
         json.dump(data, file, indent=4)
 
-    print(mod_name + " installed")
+    message(mod_name + " installed")
 
 
 def remove_mod(slug_or_id):
-    print("Removing mod...")
+    if debug_mode:
+        message("Removing mod...")
 
     with open("mcmodmanager.json", "r") as file:
         data = json.load(file)
@@ -194,10 +205,10 @@ def remove_mod(slug_or_id):
             with open("mcmodmanager.json", "w") as file:
                 json.dump(data, file, indent=4)
 
-            print("Successfully removed " + mod_name)
+            message("Successfully removed " + mod_name)
             return
 
-    print("Mod not found")
+    message("Mod not found")
 
 
 def get_modrinth_mod_info(mod_slug, version, mod_version_id=None):
@@ -251,7 +262,7 @@ def get_curseforge_mod_info(mod_id, version, mod_version_id=None):
 def check_updates(version):
 
     if not check_version_exists(version):
-        print("[ERROR]: " + version + " is not a valid Minecraft version")
+        message("[ERROR]: " + version + " is not a valid Minecraft version")
         exit()
 
     with open("mcmodmanager.json", "r") as file:
@@ -316,14 +327,16 @@ def check_updates(version):
     with open("mcmodmanager.json", "w") as file:
         json.dump(data, file, indent=4)
 
-    print("\nUpdates available for:")
+    message()
+    message("Updates available for:")
     for mod in mods_with_updates:
-        print(mod)
+        message(mod)
 
-    print("\nNo updates for:")
+    message()
+    message("No updates for:")
     for mod in mods_without_updates:
-        print(mod)
-    print()
+        message(mod)
+    message()
 
 
 def check_pending_updates(version):
@@ -360,12 +373,12 @@ def remove_mods_without_updates():
 def update_mods(version):
 
     if not check_version_exists(version):
-        print("[ERROR]: " + version + " is not a valid Minecraft version")
+        message("[ERROR]: " + version + " is not a valid Minecraft version")
         exit()
 
     pending_updates = check_pending_updates(version)
     if pending_updates == 0:
-        print("\nThere are no pending updates.\nCheck for updates by using the -c flag.\nSee usage (-h) for more information.\n")
+        message("\nThere are no pending updates.\nCheck for updates by using the -c flag.\nSee usage (-h) for more information.\n")
         sys.exit()
 
     with open("mcmodmanager.json", "r") as file:
@@ -404,7 +417,7 @@ def update_mods(version):
                 # Remove pending update data
                 del mod["update"]
 
-                print(mod["mod_name"] + " has been updated")
+                message(mod["mod_name"] + " has been updated")
 
     with open("mcmodmanager.json", "w") as file:
         json.dump(data, file, indent=4)
@@ -413,7 +426,7 @@ def update_mods(version):
 
 
 def print_usage():
-    print('''
+    message('''
     Usage: python mcmodmanager.py [OPTIONS]
 
     Options:
@@ -432,6 +445,12 @@ def main():
     init_api_key()
 
     if len(sys.argv) > 1:
+
+        global debug_mode
+        if sys.argv[len(sys.argv)-1] == '--debug':
+            debug_mode = True
+        else:
+            debug_mode = False
 
         match sys.argv[1]:
             case "-a" | "--add-mod":

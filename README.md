@@ -26,6 +26,7 @@ The script provides several command-line options for managing your Minecraft mod
 | `-u`, `--update-mods`    | [VERSION]               | Updates mods to desired version.                                                                      |
 | `-s`, `--server-version` | [VERSION]               | Change the stored value of your Minecraft server version. (Used when adding new mods)                 |
 | `-h`, `--help`           |                         | Prints usage.                                                                                         |
+| `--debug`                |                         | Display more information to console. Must be passed as the last argument in your command.             |
 
 \*NOTE: For a mod to be added using CurseForge, you must use the mod ID. The CurseForge API does not support queries using the mod slugs, even though they exist.
 
@@ -55,10 +56,10 @@ python mcmodmanager.py --remove-mod gvQqBUqZ
 python mcmodmanager.py -c 1.19.4
 ```
 
--   Updating your mods to version 1.19.4
+-   Updating your mods to version 1.19.4 in debug mode
 
 ```
-python mcmodmanager.py --update-mods 1.19.4
+python mcmodmanager.py --update-mods 1.19.4 --debug
 ```
 
 -   Setting the server version to 1.20
