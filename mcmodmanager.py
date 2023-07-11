@@ -101,7 +101,6 @@ def set_curseforge_api_key(key):
 def check_mod_exists(slug_or_id):
     with open("mcmodmanager.json", "r") as file:
         data = json.load(file)
-        server_version = data["server_version"]
         mods = data["mods"]
 
     for i, mod in enumerate(mods):
@@ -360,8 +359,11 @@ def remove_mods_without_updates():
 
 def update_mods(version):
 
-    pending_updates = check_pending_updates(version)
+    if not check_version_exists(version):
+        print("[ERROR]: " + version + " is not a valid Minecraft version")
+        exit()
 
+    pending_updates = check_pending_updates(version)
     if pending_updates == 0:
         print("\nThere are no pending updates.\nCheck for updates by using the -c flag.\nSee usage (-h) for more information.\n")
         sys.exit()
@@ -371,21 +373,21 @@ def update_mods(version):
         mods = data["mods"]
         server_version = data["server_version"]
 
+        # Only need to remove mods without updates if we are upgrading to a newer server version,
+        # as that would lead to mod files for different versions of Minecraft
         if server_version != version and pending_updates < len(mods):
 
             confirmation = input(
                 "\nAny mods that do not have pending updates will be removed. Do you want to proceed? (yes/no): ")
+
             if confirmation.lower() != "yes":
                 sys.exit()
 
             remove_mods_without_updates()
 
-    with open("mcmodmanager.json", "r") as file:
-        data = json.load(file)
-        mods = data["mods"]
-
         for mod in mods:
             if "update" in mod:
+
                 # Remove old file
                 os.remove(os.path.join("mods", mod["filename"]))
 
