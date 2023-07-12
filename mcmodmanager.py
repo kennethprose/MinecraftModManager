@@ -4,6 +4,9 @@ import requests
 import sys
 import datetime
 
+# TODO: List mods function
+# TODO: Import existing library function (if possible)
+
 
 def message(message=""):
     current_time = datetime.datetime.now()
@@ -68,8 +71,12 @@ def init_api_key():
     with open("mcmodmanager.json", "r") as file:
         data = json.load(file)
 
-    global curseforge_api_key
-    curseforge_api_key = data["curseforge_api_key"]
+    if "curseforge_api_key" in data:
+        global curseforge_api_key
+        curseforge_api_key = data["curseforge_api_key"]
+    else:
+        message("[ERROR]: Curseforge API key not set. Set API key by using the -k flag. See usage (-h) for more information.")
+        sys.exit()
 
 
 def check_version_exists(version):
@@ -442,7 +449,6 @@ def print_usage():
 
 def main():
     init_json_file()
-    init_api_key()
 
     if len(sys.argv) > 1:
 
@@ -454,8 +460,10 @@ def main():
 
         match sys.argv[1]:
             case "-a" | "--add-mod":
+                init_api_key()
                 add_mod(sys.argv[2], sys.argv[3])
             case "-c" | "--check-updates":
+                init_api_key()
                 check_updates(sys.argv[2])
             case "-h" | "--help":
                 print_usage()
