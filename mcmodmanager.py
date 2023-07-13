@@ -4,7 +4,6 @@ import requests
 import sys
 import datetime
 
-# TODO: List mods function
 # TODO: Import existing library function (if possible)
 
 
@@ -432,8 +431,23 @@ def update_mods(version):
     set_server_version(version)
 
 
+def list_mods():
+
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        mods = data["mods"]
+
+    message()
+    message("Installed Mods:")
+
+    for mod in mods:
+        message(mod["mod_name"])
+
+    message()
+
+
 def print_usage():
-    message('''
+    print('''
     Usage: python mcmodmanager.py [OPTIONS]
 
     Options:
@@ -441,9 +455,11 @@ def print_usage():
     -c, --check-updates [VERSION]       Check to see if mods have new versions available for specified Minecraft version. 
     -h, --help                          Prints usage.
     -k, --api-key                       Set the API key that is required for CurseForge
+    -l, --list-mods                     Lists all of the mods that are currently installed
     -r, --remove-mod [ID|Slug]          Remove the mod with the specified ID or slug.
     -s, --server-version [VERSION]      Change the stored value of your Minecraft server version to VERSION.
     -u, --update-mods [VERSION]         Removes any mods without pending updates to the desired version and updates the rest
+    --debug                             Display more information to console. Must be passed as the last argument in your command.
     ''')
 
 
@@ -469,6 +485,8 @@ def main():
                 print_usage()
             case "-k" | "--api-key":
                 set_curseforge_api_key(sys.argv[2])
+            case "-l" | "--list-mods":
+                list_mods()
             case "-r" | "--remove-mod":
                 remove_mod(sys.argv[2])
             case "-s" | "--server-version":

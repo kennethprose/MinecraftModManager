@@ -21,11 +21,13 @@ The script provides several command-line options for managing your Minecraft mod
 | Option                   | Required Value(s)       | Description                                                                                           |
 | ------------------------ | ----------------------- | ----------------------------------------------------------------------------------------------------- |
 | `-a`, `--add-mod`        | [Source] [ModID/Slug]\* | Fetch and install the mod with the given ID or slug from the desired source (Modrinth or CurseForge). |
-| `-r`, `--remove-mod`     | [ModID/Slug]            | Remove the mod with the specified ID or slug.                                                         |
 | `-c`, `--check-updates`  | [VERSION]               | Check to see which mods have new versions available for specified Minecraft version.                  |
-| `-u`, `--update-mods`    | [VERSION]               | Updates mods to desired version.                                                                      |
-| `-s`, `--server-version` | [VERSION]               | Change the stored value of your Minecraft server version. (Used when adding new mods)                 |
 | `-h`, `--help`           |                         | Prints usage.                                                                                         |
+| `-k`, `--api-key`        |                         | Set the API key that is required for CurseForge.                                                      |
+| `-l`, `--list-mods`      |                         | Lists all of the mods that are currently installed.                                                   |
+| `-r`, `--remove-mod`     | [ModID/Slug]            | Remove the mod with the specified ID or slug.                                                         |
+| `-s`, `--server-version` | [VERSION]               | Change the stored value of your Minecraft server version. (Used when adding new mods)                 |
+| `-u`, `--update-mods`    | [VERSION]               | Updates mods to desired version.                                                                      |
 | `--debug`                |                         | Display more information to console. Must be passed as the last argument in your command.             |
 
 \*NOTE: For a mod to be added using CurseForge, you must use the mod ID. The CurseForge API does not support queries using the mod slugs, even though they exist.
