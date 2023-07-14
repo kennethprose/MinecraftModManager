@@ -1,10 +1,9 @@
+import hashlib
 import json
 import os
 import requests
 import sys
 import datetime
-
-# TODO: Import existing library function (if possible)
 
 
 def message(message=""):
@@ -444,6 +443,19 @@ def list_mods():
         message(mod["mod_name"])
 
     message()
+
+# TODO: Import existing modrinth library using the hash of files
+# Function to generate SHA1 hash of a file
+
+
+def generate_file_sha1_hash(file_path):
+    sha1_hash = hashlib.sha1()
+    with open(file_path, 'rb') as file:
+        chunk = 0
+        while chunk != b'':
+            chunk = file.read(1024)
+            sha1_hash.update(chunk)
+    return sha1_hash.hexdigest()
 
 
 def print_usage():
