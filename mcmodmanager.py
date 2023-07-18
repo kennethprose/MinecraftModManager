@@ -19,8 +19,6 @@ def modrinth_api_call(endpoint):
     if response.status_code == 200:
         return response.json()
     else:
-        message("Error fetching data from Modrinth API. Status code: " +
-                str(response.status_code))
         return None
 
 
@@ -33,8 +31,6 @@ def curseforge_api_call(endpoint):
     if response.status_code == 200:
         return response.json()
     else:
-        message(
-            "Error fetching data from CurseForge API. Status code: " + str(response.status_code))
         return None
 
 
@@ -451,11 +447,63 @@ def list_mods():
 def generate_file_sha1_hash(file_path):
     sha1_hash = hashlib.sha1()
     with open(file_path, 'rb') as file:
-        chunk = 0
-        while chunk != b'':
-            chunk = file.read(1024)
+        for chunk in iter(lambda: file.read(4096), b''):
             sha1_hash.update(chunk)
     return sha1_hash.hexdigest()
+
+
+def import_mods():
+    # Iterate over all mods in the mods folder
+    for filename in os.listdir('./mods/'):
+        file_path = os.path.join('./mods/', filename)
+        if os.path.isfile(file_path) and file_path.endswith('.jar'):
+
+            # Get the hash of the function and use it to check the modrinth api
+            sha1_hash = generate_file_sha1_hash(file_path)
+            mod_info = modrinth_api_call('/version_file/' + sha1_hash)
+
+            if mod_info == None:
+                message('Could not identify the mod at ' + file_path)
+            else:
+
+                # If mod is found, get relevant info
+                mod_id = mod_info["project_id"]
+                mod_version_id = mod_info["id"]
+                download_url = mod_info["files"][0]["url"]
+                current_version = mod_info["game_versions"][0]
+                source = "modrinth"
+
+                more_mod_info = modrinth_api_call('/project/' + mod_id)
+                mod_name = more_mod_info["title"]
+                mod_slug = more_mod_info["slug"]
+
+                # Check if mod is already documented
+                if check_mod_exists(mod_id):
+                    message(mod_name + " is already installed")
+                else:
+
+                    # Add mod info to json
+                    new_mod = {
+                        "mod_name": mod_name,
+                        "mod_slug": mod_slug,
+                        "mod_id": mod_id,
+                        "mod_version_id": mod_version_id,
+                        "filename": filename,
+                        "download_url": download_url,
+                        "current_version": current_version,
+                        "source": source
+                    }
+
+                    with open("mcmodmanager.json", "r") as file:
+                        data = json.load(file)
+                        mods = data["mods"]
+
+                    mods.append(new_mod)
+
+                    with open("mcmodmanager.json", "w") as file:
+                        json.dump(data, file, indent=4)
+
+                    message(mod_name + " has been imported")
 
 
 def print_usage():
@@ -466,6 +514,7 @@ def print_usage():
     -a, --add-mod [Source] [ID|Slug]    Fetch and install the mod with the given ID or slug from the desired source (Modrinth or CurseForge).
     -c, --check-updates [VERSION]       Check to see if mods have new versions available for specified Minecraft version. 
     -h, --help                          Prints usage.
+    -i, --import-mods                   Scan the mods folder and import any mods that not already monitored (Only works with Modrinth mods)
     -k, --api-key                       Set the API key that is required for CurseForge
     -l, --list-mods                     Lists all of the mods that are currently installed
     -r, --remove-mod [ID|Slug]          Remove the mod with the specified ID or slug.
@@ -495,6 +544,8 @@ def main():
                 check_updates(sys.argv[2])
             case "-h" | "--help":
                 print_usage()
+            case "-i" | "--import-mods":
+                import_mods()
             case "-k" | "--api-key":
                 set_curseforge_api_key(sys.argv[2])
             case "-l" | "--list-mods":

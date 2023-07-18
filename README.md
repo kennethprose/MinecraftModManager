@@ -23,6 +23,7 @@ The script provides several command-line options for managing your Minecraft mod
 | `-a`, `--add-mod`        | [Source] [ModID/Slug]\* | Fetch and install the mod with the given ID or slug from the desired source (Modrinth or CurseForge). |
 | `-c`, `--check-updates`  | [VERSION]               | Check to see which mods have new versions available for specified Minecraft version.                  |
 | `-h`, `--help`           |                         | Prints usage.                                                                                         |
+| `-i`, `--import-mods`    |                         | Scan the mods folder and import any mods that not already monitored (Only works with Modrinth mods)   |
 | `-k`, `--api-key`        |                         | Set the API key that is required for CurseForge.                                                      |
 | `-l`, `--list-mods`      |                         | Lists all of the mods that are currently installed.                                                   |
 | `-r`, `--remove-mod`     | [ModID/Slug]            | Remove the mod with the specified ID or slug.                                                         |
@@ -62,12 +63,6 @@ python mcmodmanager.py -c 1.19.4
 
 ```
 python mcmodmanager.py --update-mods 1.19.4 --debug
-```
-
--   Setting the server version to 1.20
-
-```
-python mcmodmanager.py -s 1.20
 ```
 
 ## FAQ
