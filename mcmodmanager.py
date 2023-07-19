@@ -1,3 +1,4 @@
+import argparse
 import hashlib
 import json
 import os
@@ -508,56 +509,77 @@ def import_mods():
 
 def print_usage():
     print('''
-    Usage: python mcmodmanager.py [OPTIONS]
+    usage: python mcmodmanager.py [-h] [-a [source] [id_or_slug]] [-c [version]] [-i] [-k [api_key]] [-l] [-r [id_or_slug]] [-s [version]] [-u [version]] [--debug]
 
-    Options:
-    -a, --add-mod [Source] [ID|Slug]    Fetch and install the mod with the given ID or slug from the desired source (Modrinth or CurseForge).
-    -c, --check-updates [VERSION]       Check to see if mods have new versions available for specified Minecraft version. 
-    -h, --help                          Prints usage.
-    -i, --import-mods                   Scan the mods folder and import any mods that not already monitored (Only works with Modrinth mods)
-    -k, --api-key                       Set the API key that is required for CurseForge
-    -l, --list-mods                     Lists all of the mods that are currently installed
-    -r, --remove-mod [ID|Slug]          Remove the mod with the specified ID or slug.
-    -s, --server-version [VERSION]      Change the stored value of your Minecraft server version to VERSION.
-    -u, --update-mods [VERSION]         Removes any mods without pending updates to the desired version and updates the rest
-    --debug                             Display more information to console. Must be passed as the last argument in your command.
+    A tool to download, update, and manage mods for your Minecraft server using the Modrinth and CursgeForge APIs.
+
+    Flag                    Args                Description
+    -------------------------------------------------------------------------------------------------------------------------------------------------
+    -a, --add-mod           [Source] [ID|Slug]  Fetch and install the mod with the given ID or slug from the desired source (Modrinth or CurseForge).
+    -c, --check-updates     [VERSION]           Check to see if mods have new versions available for specified Minecraft version. 
+    -h, --help                                  Prints usage.
+    -i, --import-mods                           Scan the mods folder and import any mods that not already monitored. (Only works with Modrinth mods)
+    -k, --api-key                               Set the API key that is required for CurseForge.
+    -l, --list-mods                             Lists all of the mods that are currently installed.
+    -r, --remove-mod        [ID|Slug]           Remove the mod with the specified ID or slug.
+    -s, --server-version    [VERSION]           Change the stored value of your Minecraft server version to VERSION.
+    -u, --update-mods       [VERSION]           Removes any mods without pending updates to the desired version and updates the rest.
+    --debug                                     Display more information to console. Must be passed as the last argument in your command.
     ''')
 
 
 def main():
     init_json_file()
 
-    if len(sys.argv) > 1:
+    # Create the argument parser
+    parser = argparse.ArgumentParser(
+        prog="python mcmodmanager.py",
+        description="A tool to download, update, and manage mods for your Minecraft server using the Modrinth and CursgeForge APIs.",
+        add_help=False)
 
-        global debug_mode
-        if sys.argv[len(sys.argv)-1] == '--debug':
-            debug_mode = True
-        else:
-            debug_mode = False
+    # Add command line arguments and their respective handlers
+    parser.add_argument("-a", "--add-mod", nargs=2,
+                        metavar=("[source]", "[id_or_slug]"))
+    parser.add_argument("-c", "--check-updates", metavar="[version]")
+    parser.add_argument("-h", "--help", action="store_true")
+    parser.add_argument("-i", "--import-mods", action="store_true")
+    parser.add_argument("-k", "--api-key", metavar="[api_key]")
+    parser.add_argument("-l", "--list-mods", action="store_true")
+    parser.add_argument("-r", "--remove-mod", metavar="[id_or_slug]")
+    parser.add_argument("-s", "--server-version", metavar="[version]")
+    parser.add_argument("-u", "--update-mods", metavar="[version]")
+    parser.add_argument("--debug", action="store_true")
 
-        match sys.argv[1]:
-            case "-a" | "--add-mod":
-                init_api_key()
-                add_mod(sys.argv[2], sys.argv[3])
-            case "-c" | "--check-updates":
-                init_api_key()
-                check_updates(sys.argv[2])
-            case "-h" | "--help":
-                print_usage()
-            case "-i" | "--import-mods":
-                import_mods()
-            case "-k" | "--api-key":
-                set_curseforge_api_key(sys.argv[2])
-            case "-l" | "--list-mods":
-                list_mods()
-            case "-r" | "--remove-mod":
-                remove_mod(sys.argv[2])
-            case "-s" | "--server-version":
-                set_server_version(sys.argv[2])
-            case "-u" | "--update-mods":
-                update_mods(sys.argv[2])
+    # Parse the arguments from the command line
+    args = parser.parse_args()
 
+    # Check if --debug mode is enabled
+    global debug_mode
+    debug_mode = args.debug
+
+    # Check which command was invoked and execute the corresponding function
+    if args.add_mod:
+        init_api_key()
+        add_mod(args.add_mod[0], args.add_mod[1])
+    elif args.check_updates:
+        init_api_key()
+        check_updates(args.check_updates)
+    elif args.help:
+        print_usage()
+    elif args.import_mods:
+        import_mods()
+    elif args.api_key:
+        set_curseforge_api_key(args.api_key)
+    elif args.list_mods:
+        list_mods()
+    elif args.remove_mod:
+        remove_mod(args.remove_mod)
+    elif args.server_version:
+        set_server_version(args.server_version)
+    elif args.update_mods:
+        update_mods(args.update_mods)
     else:
+        # If no argument was provided or unrecognized argument, print usage
         print_usage()
 
 
