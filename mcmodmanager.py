@@ -7,6 +7,9 @@ import sys
 import datetime
 
 
+# TODO: Add ability to add mods based on url
+
+
 def message(message=""):
     current_time = datetime.datetime.now()
     formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -507,6 +510,13 @@ def import_mods():
                     message(mod_name + " has been imported")
 
 
+def print_server_version():
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        server_version = data["server_version"]
+        message(server_version)
+
+
 def print_usage():
     print('''
     usage: python mcmodmanager.py [-h] [-a [source] [id_or_slug]] [-c [version]] [-i] [-k [api_key]] [-l] [-r [id_or_slug]] [-s [version]] [-u [version]] [--debug]
@@ -522,8 +532,9 @@ def print_usage():
     -k, --api-key                               Set the API key that is required for CurseForge.
     -l, --list-mods                             Lists all of the mods that are currently installed.
     -r, --remove-mod        [ID|Slug]           Remove the mod with the specified ID or slug.
-    -s, --server-version    [VERSION]           Change the stored value of your Minecraft server version to VERSION.
+    -s, --set-version       [VERSION]           Change the stored value of your Minecraft server version to VERSION.
     -u, --update-mods       [VERSION]           Removes any mods without pending updates to the desired version and updates the rest.
+    -v, --print-version                         Prints the current version of the server and mods.
     --debug                                     Display more information to console. Must be passed as the last argument in your command.
     ''')
 
@@ -546,8 +557,9 @@ def main():
     parser.add_argument("-k", "--api-key", metavar="[api_key]")
     parser.add_argument("-l", "--list-mods", action="store_true")
     parser.add_argument("-r", "--remove-mod", metavar="[id_or_slug]")
-    parser.add_argument("-s", "--server-version", metavar="[version]")
+    parser.add_argument("-s", "--set-version", metavar="[version]")
     parser.add_argument("-u", "--update-mods", metavar="[version]")
+    parser.add_argument("-v", "--print-version",  action="store_true")
     parser.add_argument("--debug", action="store_true")
 
     # Parse the arguments from the command line
@@ -574,10 +586,12 @@ def main():
         list_mods()
     elif args.remove_mod:
         remove_mod(args.remove_mod)
-    elif args.server_version:
-        set_server_version(args.server_version)
+    elif args.set_version:
+        set_server_version(args.set_version)
     elif args.update_mods:
         update_mods(args.update_mods)
+    elif args.print_version:
+        print_server_version()
     else:
         # If no argument was provided or unrecognized argument, print usage
         print_usage()
