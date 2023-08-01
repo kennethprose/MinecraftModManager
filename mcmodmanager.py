@@ -7,9 +7,6 @@ import sys
 import datetime
 
 
-# TODO: Add ability to add mods based on url
-
-
 def message(message=""):
     current_time = datetime.datetime.now()
     formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -146,6 +143,9 @@ def add_mod(source, slug_or_id):
         mod_name = mod_info["data"]["name"]
         mod_id = str(mod_info["data"]["id"])
         mod_slug = mod_info["data"]["slug"]
+    else:
+        message("[ERROR] \'" + source + "\' is not a valid source")
+        sys.exit()
 
     if debug_mode:
         message("Adding mod: " + mod_name)
@@ -443,9 +443,6 @@ def list_mods():
         message(mod["mod_name"])
 
     message()
-
-# TODO: Import existing modrinth library using the hash of files
-# Function to generate SHA1 hash of a file
 
 
 def generate_file_sha1_hash(file_path):
