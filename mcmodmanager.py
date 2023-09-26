@@ -62,6 +62,15 @@ def init_json_file():
         exit()
 
 
+def init_server_version():
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+
+    if "server_version" not in data:
+        message("[ERROR]: Server version not set. Set the server version using the -s flag. See usage (-h) for more information.")
+        exit()
+
+
 def check_for_curseforge_mods():
     with open("mcmodmanager.json", "r") as file:
         data = json.load(file)
@@ -585,9 +594,11 @@ def main():
         # Init API key only if needed
         if args.add_mod[0] == 'curseforge':
             init_api_key()
+        init_server_version()
         add_mod(args.add_mod[0], args.add_mod[1])
     elif args.check_updates:
         init_api_key()
+        init_server_version()
         check_updates(args.check_updates)
     elif args.help:
         print_usage()
@@ -602,6 +613,7 @@ def main():
     elif args.set_version:
         set_server_version(args.set_version)
     elif args.update_mods:
+        init_server_version()
         update_mods(args.update_mods)
     elif args.print_version:
         print_server_version()
