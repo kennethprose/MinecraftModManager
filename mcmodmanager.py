@@ -62,6 +62,18 @@ def init_json_file():
         exit()
 
 
+def check_for_curseforge_mods():
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        mods = data["mods"]
+
+    for mod in mods:
+        if mod["source"] == 'curseforge':
+            return True
+
+    return False
+
+
 def init_api_key():
     with open("mcmodmanager.json", "r") as file:
         data = json.load(file)
@@ -69,6 +81,8 @@ def init_api_key():
     if "curseforge_api_key" in data:
         global curseforge_api_key
         curseforge_api_key = data["curseforge_api_key"]
+    elif not check_for_curseforge_mods():
+        return
     else:
         message("[ERROR]: Curseforge API key not set. Set API key by using the -k flag. See usage (-h) for more information.")
         sys.exit()
@@ -568,7 +582,9 @@ def main():
 
     # Check which command was invoked and execute the corresponding function
     if args.add_mod:
-        init_api_key()
+        # Init API key only if needed
+        if args.add_mod[0] == 'curseforge':
+            init_api_key()
         add_mod(args.add_mod[0], args.add_mod[1])
     elif args.check_updates:
         init_api_key()
