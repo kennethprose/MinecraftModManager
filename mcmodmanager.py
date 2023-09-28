@@ -158,11 +158,19 @@ def add_mod(source, slug_or_id):
 
     if source == 'modrinth':
         mod_info = modrinth_api_call("/project/" + slug_or_id)
+        # Gracefully exit if the mod is not found
+        if mod_info == None:
+            message("[ERROR]: Mod not found. Make sure the slug/ID is correct.")
+            exit()
         mod_name = mod_info["title"]
         mod_id = mod_info["id"]
         mod_slug = mod_info["slug"]
     elif source == 'curseforge':
         mod_info = curseforge_api_call("/v1/mods/" + slug_or_id)
+        # Gracefully exit if the mod is not found
+        if mod_info == None:
+            message("[ERROR]: Mod not found. Make sure the ID is correct.")
+            exit()
         mod_name = mod_info["data"]["name"]
         mod_id = str(mod_info["data"]["id"])
         mod_slug = mod_info["data"]["slug"]
