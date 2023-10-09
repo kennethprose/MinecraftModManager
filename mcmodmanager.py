@@ -6,6 +6,14 @@ import requests
 import sys
 import datetime
 
+version = 'v231008'
+
+def check_new_version():
+    response = requests.get("https://api.github.com/repos/kennethprose/MinecraftModManager/releases/latest")
+    latest_version = response.json()["tag_name"]
+    if latest_version > version:
+        message(f"[ALERT] A new verison of MCModManager is available. Download {latest_version} here: https://github.com/kennethprose/MinecraftModManager/releases/tag/{latest_version}")
+
 
 def message(message=""):
     current_time = datetime.datetime.now()
@@ -568,6 +576,8 @@ def print_usage():
 
 
 def main():
+    check_new_version()
+    
     init_json_file()
 
     # Create the argument parser
