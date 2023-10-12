@@ -7,7 +7,7 @@ import sys
 import datetime
 
 
-version = 'v231008'
+version = 'v231011'
 
 
 def check_new_version():
