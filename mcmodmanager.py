@@ -6,13 +6,17 @@ import requests
 import sys
 import datetime
 
+
 version = 'v231008'
 
+
 def check_new_version():
-    response = requests.get("https://api.github.com/repos/kennethprose/MinecraftModManager/releases/latest")
+    response = requests.get(
+        "https://api.github.com/repos/kennethprose/MinecraftModManager/releases/latest")
     latest_version = response.json()["tag_name"]
     if latest_version > version:
-        message(f"[ALERT] A new verison of MCModManager is available. Download {latest_version} here: https://github.com/kennethprose/MinecraftModManager/releases/tag/{latest_version}")
+        message(
+            f"[ALERT] A new verison of MCModManager is available. Download {latest_version} here: https://github.com/kennethprose/MinecraftModManager/releases/tag/{latest_version}")
 
 
 def message(message=""):
@@ -153,79 +157,81 @@ def check_mod_exists(slug_or_id):
     return False
 
 
-def add_mod(source, slug_or_id):
+def add_mod(source, mods_to_add):
 
-    if check_mod_exists(slug_or_id):
-        message("Mod is already installed")
-        exit()
+    mod_list = mods_to_add.split(",")
 
-    with open("mcmodmanager.json", "r") as file:
-        data = json.load(file)
-        server_version = data["server_version"]
-        mods = data["mods"]
+    for slug_or_id in mod_list:
 
-    if source == 'modrinth':
-        mod_info = modrinth_api_call("/project/" + slug_or_id)
-        # Gracefully exit if the mod is not found
-        if mod_info == None:
-            message("[ERROR]: Mod not found. Make sure the slug/ID is correct.")
-            exit()
-        mod_name = mod_info["title"]
-        mod_id = mod_info["id"]
-        mod_slug = mod_info["slug"]
-    elif source == 'curseforge':
-        mod_info = curseforge_api_call("/v1/mods/" + slug_or_id)
-        # Gracefully exit if the mod is not found
-        if mod_info == None:
-            message("[ERROR]: Mod not found. Make sure the ID is correct.")
-            exit()
-        mod_name = mod_info["data"]["name"]
-        mod_id = str(mod_info["data"]["id"])
-        mod_slug = mod_info["data"]["slug"]
-    else:
-        message("[ERROR] \'" + source + "\' is not a valid source")
-        sys.exit()
+        if check_mod_exists(slug_or_id):
+            message(f"{slug_or_id} is already installed")
+            continue
 
-    if debug_mode:
-        message("Adding mod: " + mod_name)
+        with open("mcmodmanager.json", "r") as file:
+            data = json.load(file)
+            server_version = data["server_version"]
+            mods = data["mods"]
 
-    if source == 'modrinth':
-        mod_versions = modrinth_api_call(
-            "/project/" + slug_or_id + "/version?game_versions=[\"" + server_version + "\"]&loaders=[\"fabric\"]")
+        if source == 'modrinth':
+            mod_info = modrinth_api_call("/project/" + slug_or_id)
+            if mod_info == None:
+                message(
+                    f"[ERROR]: {slug_or_id} not found. Make sure the slug/ID is correct.")
+                continue
+            mod_name = mod_info["title"]
+            mod_id = mod_info["id"]
+            mod_slug = mod_info["slug"]
+        elif source == 'curseforge':
+            mod_info = curseforge_api_call("/v1/mods/" + slug_or_id)
+            if mod_info == None:
+                message(
+                    f"[ERROR]: {slug_or_id} not found. Make sure the ID is correct.")
+                continue
+            mod_name = mod_info["data"]["name"]
+            mod_id = str(mod_info["data"]["id"])
+            mod_slug = mod_info["data"]["slug"]
+        else:
+            message("[ERROR] \'" + source + "\' is not a valid source")
+            continue
 
-        most_recent_version = mod_versions[0]
-        mod_version_id = most_recent_version["id"]
-        filename = most_recent_version["files"][0]["filename"]
-        download_url = most_recent_version["files"][0]["url"]
+        if debug_mode:
+            message("Adding mod: " + mod_name)
 
-    elif source == 'curseforge':
-        mod_versions = curseforge_api_call(
-            "/v1/mods/" + slug_or_id + "/files?gameVersion=" + server_version + "&modLoaderType=4")
+        if source == 'modrinth':
+            mod_versions = modrinth_api_call(
+                f"/project/{slug_or_id}/version?game_versions=[\"{server_version}\"]&loaders=[\"fabric\"]")
+            most_recent_version = mod_versions[0]
+            mod_version_id = most_recent_version["id"]
+            filename = most_recent_version["files"][0]["filename"]
+            download_url = most_recent_version["files"][0]["url"]
 
-        most_recent_version = mod_versions["data"][0]
-        mod_version_id = str(most_recent_version["id"])
-        filename = most_recent_version["fileName"]
-        download_url = most_recent_version["downloadUrl"]
+        elif source == 'curseforge':
+            mod_versions = curseforge_api_call(
+                f"/v1/mods/{slug_or_id}/files?gameVersion={server_version}&modLoaderType=4")
+            most_recent_version = mod_versions["data"][0]
+            mod_version_id = str(most_recent_version["id"])
+            filename = most_recent_version["fileName"]
+            download_url = most_recent_version["downloadUrl"]
 
-    new_mod = {
-        "mod_name": mod_name,
-        "mod_slug": mod_slug,
-        "mod_id": mod_id,
-        "mod_version_id": mod_version_id,
-        "filename": filename,
-        "download_url": download_url,
-        "current_version": server_version,
-        "source": source
-    }
+        new_mod = {
+            "mod_name": mod_name,
+            "mod_slug": mod_slug,
+            "mod_id": mod_id,
+            "mod_version_id": mod_version_id,
+            "filename": filename,
+            "download_url": download_url,
+            "current_version": server_version,
+            "source": source
+        }
 
-    mods.append(new_mod)
+        mods.append(new_mod)
 
-    download_mod(download_url, filename)
+        download_mod(download_url, filename)
 
-    with open("mcmodmanager.json", "w") as file:
-        json.dump(data, file, indent=4)
+        with open("mcmodmanager.json", "w") as file:
+            json.dump(data, file, indent=4)
 
-    message(mod_name + " installed")
+        message(mod_name + " installed")
 
 
 def remove_mod(slug_or_id):
@@ -577,7 +583,7 @@ def print_usage():
 
 def main():
     check_new_version()
-    
+
     init_json_file()
 
     # Create the argument parser
