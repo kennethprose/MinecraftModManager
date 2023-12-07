@@ -7,7 +7,7 @@ import sys
 import datetime
 
 
-version = 'v231013'
+version = 'v231206'
 
 
 def check_new_version():
@@ -235,6 +235,10 @@ def add_mod(source, mods_to_add):
 
 
 def remove_mod_wrapper(mods_to_remove):
+    if mods_to_remove == 'ALL':
+        remove_all_mods()
+        return
+
     mod_list = mods_to_remove.split(",")
     for slug_or_id in mod_list:
         remove_mod(slug_or_id)
@@ -266,6 +270,15 @@ def remove_mod(slug_or_id):
             return
 
     message(f"{slug_or_id} not found")
+
+
+def remove_all_mods():
+    with open("mcmodmanager.json", "r") as file:
+        data = json.load(file)
+        mods = data["mods"]
+
+    for mod in mods:
+        remove_mod(mod["mod_slug"])
 
 
 def get_modrinth_mod_info(mod_slug, version, mod_version_id=None):
