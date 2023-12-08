@@ -12,7 +12,7 @@ Minecraft Mod Manager is a Python script that allows you to keep track of all th
 ## Installation
 
 1. Ensure you have Python installed on your system.
-2. Clone or download the mcmodmanager.py file to the parent directory of your Minecraft server's mods folder.
+2. Clone or download the mcmm.py file to the parent directory of your Minecraft server's mods folder.
 
 ## Usage
 
@@ -39,37 +39,37 @@ The script provides several command-line options for managing your Minecraft mod
 - Adding the Fabric API mod from Modrinth using the mod 'slug':
 
 ```
-python mcmodmanager.py -a modrinth fabric-api
+python mcmm.py -a modrinth fabric-api
 ```
 
 - Adding the Fabric API mod from CurseForge using the mod ID:
 
 ```
-python mcmodmanager.py -a CurseForge 306612
+python mcmm.py -a CurseForge 306612
 ```
 
 - Adding multiple mods at once:
 
 ```
-python mcmodmanager.py -a modrinth fabric-api,lithium,modmenu
+python mcmm.py -a modrinth fabric-api,lithium,modmenu
 ```
 
 - Removing the Lithium mod using it's mod ID:
 
 ```
-python mcmodmanager.py --remove-mod gvQqBUqZ
+python mcmm.py --remove-mod gvQqBUqZ
 ```
 
 - Checking if your mods can be updated to version 1.19.4
 
 ```
-python mcmodmanager.py -c 1.19.4
+python mcmm.py -c 1.19.4
 ```
 
 - Updating your mods to version 1.19.4 in debug mode
 
 ```
-python mcmodmanager.py --update-mods 1.19.4 --debug
+python mcmm.py --update-mods 1.19.4 --debug
 ```
 
 ## FAQ

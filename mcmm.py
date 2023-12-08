@@ -63,19 +63,19 @@ def download_mod(url, filename):
 
 
 def init_json_file():
-    if os.path.exists("mcmodmanager.json"):
+    if os.path.exists("mcmm.json"):
         return
     else:
-        message("[ERROR] Could not find mcmodmanager.json")
-        with open("mcmodmanager.json", "w") as file:
+        message("[ERROR] Could not find mcmm.json")
+        with open("mcmm.json", "w") as file:
             data = {"mods": []}
             json.dump(data, file, indent=4)
-        message("mcmodmanager.json has been created.")
+        message("mcmm.json has been created.")
         exit()
 
 
 def init_server_version():
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
 
     if "server_version" not in data:
@@ -84,7 +84,7 @@ def init_server_version():
 
 
 def check_for_curseforge_mods():
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
 
@@ -96,7 +96,7 @@ def check_for_curseforge_mods():
 
 
 def init_api_key():
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
 
     if "curseforge_api_key" in data:
@@ -126,26 +126,26 @@ def set_server_version(version):
         message("[ERROR]: " + version + " is not a valid Minecraft version")
         exit()
 
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
 
     data["server_version"] = version
 
-    with open("mcmodmanager.json", "w") as file:
+    with open("mcmm.json", "w") as file:
         json.dump(data, file, indent=4)
 
 
 def set_curseforge_api_key(key):
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         data["curseforge_api_key"] = key
 
-    with open("mcmodmanager.json", "w") as file:
+    with open("mcmm.json", "w") as file:
         json.dump(data, file, indent=4)
 
 
 def check_mod_exists(slug_or_id):
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
 
@@ -167,7 +167,7 @@ def add_mod(source, mods_to_add):
             message(f"{slug_or_id} is already installed")
             continue
 
-        with open("mcmodmanager.json", "r") as file:
+        with open("mcmm.json", "r") as file:
             data = json.load(file)
             server_version = data["server_version"]
             mods = data["mods"]
@@ -228,7 +228,7 @@ def add_mod(source, mods_to_add):
 
         download_mod(download_url, filename)
 
-        with open("mcmodmanager.json", "w") as file:
+        with open("mcmm.json", "w") as file:
             json.dump(data, file, indent=4)
 
         message(mod_name + " installed")
@@ -249,7 +249,7 @@ def remove_mod(slug_or_id):
     if debug_mode:
         message(f"Removing {slug_or_id}")
 
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
 
@@ -263,7 +263,7 @@ def remove_mod(slug_or_id):
 
             mods.pop(i)
 
-            with open("mcmodmanager.json", "w") as file:
+            with open("mcmm.json", "w") as file:
                 json.dump(data, file, indent=4)
 
             message(f"Successfully removed {mod_name}")
@@ -273,7 +273,7 @@ def remove_mod(slug_or_id):
 
 
 def remove_all_mods():
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
 
@@ -335,7 +335,7 @@ def check_updates(version):
         message("[ERROR]: " + version + " is not a valid Minecraft version")
         exit()
 
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         server_version = data["server_version"]
         mods = data["mods"]
@@ -394,7 +394,7 @@ def check_updates(version):
                     pass
                 mods_without_updates.append(mod_name)
 
-    with open("mcmodmanager.json", "w") as file:
+    with open("mcmm.json", "w") as file:
         json.dump(data, file, indent=4)
 
     message()
@@ -413,7 +413,7 @@ def check_pending_updates(version):
 
     pending_updates = 0
 
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
 
@@ -427,7 +427,7 @@ def check_pending_updates(version):
 
 def remove_mods_without_updates():
 
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
 
@@ -451,7 +451,7 @@ def update_mods(version):
         message("\nThere are no pending updates.\nCheck for updates by using the -c flag.\nSee usage (-h) for more information.\n")
         sys.exit()
 
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
         server_version = data["server_version"]
@@ -489,7 +489,7 @@ def update_mods(version):
 
                 message(mod["mod_name"] + " has been updated")
 
-    with open("mcmodmanager.json", "w") as file:
+    with open("mcmm.json", "w") as file:
         json.dump(data, file, indent=4)
 
     set_server_version(version)
@@ -497,7 +497,7 @@ def update_mods(version):
 
 def list_mods():
 
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
 
@@ -560,20 +560,20 @@ def import_mods():
                         "source": source
                     }
 
-                    with open("mcmodmanager.json", "r") as file:
+                    with open("mcmm.json", "r") as file:
                         data = json.load(file)
                         mods = data["mods"]
 
                     mods.append(new_mod)
 
-                    with open("mcmodmanager.json", "w") as file:
+                    with open("mcmm.json", "w") as file:
                         json.dump(data, file, indent=4)
 
                     message(mod_name + " has been imported")
 
 
 def print_server_version():
-    with open("mcmodmanager.json", "r") as file:
+    with open("mcmm.json", "r") as file:
         data = json.load(file)
         server_version = data["server_version"]
         message(server_version)
@@ -581,7 +581,7 @@ def print_server_version():
 
 def print_usage():
     print('''
-    usage: python mcmodmanager.py [-h] [-a [source] [id_or_slug]] [-c [version]] [-i] [-k [api_key]] [-l] [-r [id_or_slug]] [-s [version]] [-u [version]] [--debug]
+    usage: python mcmm.py [-h] [-a [source] [id_or_slug]] [-c [version]] [-i] [-k [api_key]] [-l] [-r [id_or_slug]] [-s [version]] [-u [version]] [--debug]
 
     A tool to download, update, and manage mods for your Minecraft server using the Modrinth and CursgeForge APIs.
 
@@ -608,7 +608,7 @@ def main():
 
     # Create the argument parser
     parser = argparse.ArgumentParser(
-        prog="python mcmodmanager.py",
+        prog="python mcmm.py",
         description="A tool to download, update, and manage mods for your Minecraft server using the Modrinth and CursgeForge APIs.",
         add_help=False)
 
