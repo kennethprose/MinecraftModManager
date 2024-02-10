@@ -7,7 +7,7 @@ import sys
 import datetime
 
 
-version = 'v231207'
+version = 'v240209'
 
 
 def check_new_version():
@@ -311,20 +311,21 @@ def get_curseforge_mod_info(mod_id, version, mod_version_id=None):
         f"/v1/mods/{mod_id}/files?gameVersion={version}&modLoaderType=4")
 
     if mod_versions:
-        newest_mod_version = mod_versions["data"][0]
+        if len(mod_versions["data"]) > 0:
+            newest_mod_version = mod_versions["data"][0]
 
-        if not mod_version_id or str(newest_mod_version["id"]) != mod_version_id:
+            if not mod_version_id or str(newest_mod_version["id"]) != mod_version_id:
 
-            new_mod_version_id = str(newest_mod_version["id"])
-            new_mod_version_filename = newest_mod_version["fileName"]
-            new_mod_version_url = newest_mod_version["downloadUrl"]
+                new_mod_version_id = str(newest_mod_version["id"])
+                new_mod_version_filename = newest_mod_version["fileName"]
+                new_mod_version_url = newest_mod_version["downloadUrl"]
 
-            return {
-                "new_version_id": new_mod_version_id,
-                "new_filename": new_mod_version_filename,
-                "new_download_url": new_mod_version_url,
-                "new_version": version
-            }
+                return {
+                    "new_version_id": new_mod_version_id,
+                    "new_filename": new_mod_version_filename,
+                    "new_download_url": new_mod_version_url,
+                    "new_version": version
+                }
 
     return None
 
