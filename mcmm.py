@@ -594,12 +594,96 @@ def print_usage():
     -i, --import-mods                           Scan the mods folder and import any mods that not already monitored. (Only works with Modrinth mods)
     -k, --api-key                               Set the API key that is required for CurseForge.
     -l, --list-mods                             Lists all of the mods that are currently installed.
-    -r, --remove-mod        [ID|Slug]           Remove the mod with the specified ID or slug.
+    -r, --remove-mod        [ID|Slug|ALL]       Remove the mod with the specified ID or slug.
     -s, --set-version       [VERSION]           Change the stored value of your Minecraft server version to VERSION.
     -u, --update-mods       [VERSION]           Removes any mods without pending updates to the desired version and updates the rest.
     -v, --print-version                         Prints the current version of the server and mods.
     --debug                                     Display more information to console. Must be passed as the last argument in your command.
     ''')
+
+
+def interactive_mode():
+
+    init_json_file()
+
+    while True:
+
+        check_new_version()
+
+        print('''What would you like to do?
+    1.  Add mod
+    2.  Remove mod
+    3.  Check for updates
+    4.  Run updates
+    5.  List mods
+    6.  Import mods
+    7.  Print server version
+    8.  Set server verion
+    9.  Set Curseforge API key
+    10. Get help
+    11. Quit
+        ''')
+
+        option = input("Enter the number of the option: ")
+
+        match option:
+            case '1':
+                source = input(
+                    "Enter the source of the mod [modrinth/curseforge]: ")
+                id = input("Enter the id/slug of the mod: ")
+
+                if source == 'curseforge':
+                    init_api_key()
+                init_server_version()
+
+                add_mod(source, id)
+
+            case '2':
+                id = input("Enter the id/slug of the mod or 'ALL': ")
+
+                remove_mod_wrapper(id)
+
+            case '3':
+                version = input(
+                    "Enter the version of Minecraft you want to check: ")
+
+                init_api_key()
+                init_server_version()
+
+                check_updates(version)
+
+            case '4':
+                version = input(
+                    "Enter the version of Minecraft you want to update: ")
+
+                init_server_version()
+
+                update_mods(version)
+
+            case '5':
+                list_mods()
+
+            case '6':
+                import_mods()
+
+            case '7':
+                print_server_version()
+
+            case '8':
+                version = input("Enter the version of Minecraft: ")
+
+                set_server_version(version)
+
+            case '9':
+                key = input("Enter your Curseforge API key: ")
+
+                set_curseforge_api_key(key)
+
+            case '10':
+                print_usage()
+
+            case '11':
+                exit()
 
 
 def main():
@@ -663,8 +747,8 @@ def main():
     elif args.print_version:
         print_server_version()
     else:
-        # If no argument was provided or unrecognized argument, print usage
-        print_usage()
+        # If no argument was provided or unrecognized argument, enter interactive mode
+        interactive_mode()
 
 
 if __name__ == "__main__":
