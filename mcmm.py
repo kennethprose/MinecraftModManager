@@ -95,14 +95,14 @@ def check_for_curseforge_mods():
     return False
 
 
-def init_api_key():
+def init_api_key(caller):
     with open("mcmm.json", "r") as file:
         data = json.load(file)
 
     if "curseforge_api_key" in data:
         global curseforge_api_key
         curseforge_api_key = data["curseforge_api_key"]
-    elif not check_for_curseforge_mods():
+    elif caller == 'check' and not check_for_curseforge_mods():
         return
     else:
         message("[ERROR]: Curseforge API key not set. Set API key by using the -k flag. See usage (-h) for more information.")
@@ -610,7 +610,7 @@ def interactive_mode():
 
         check_new_version()
 
-        print('''What would you like to do?
+        print('''\nWhat would you like to do?
     1.  Add mod
     2.  Remove mod
     3.  Check for updates
@@ -633,7 +633,7 @@ def interactive_mode():
                 id = input("Enter the id/slug of the mod: ")
 
                 if source == 'curseforge':
-                    init_api_key()
+                    init_api_key("add")
                 init_server_version()
 
                 add_mod(source, id)
@@ -647,7 +647,7 @@ def interactive_mode():
                 version = input(
                     "Enter the version of Minecraft you want to check: ")
 
-                init_api_key()
+                init_api_key("check")
                 init_server_version()
 
                 check_updates(version)
@@ -722,11 +722,11 @@ def main():
     if args.add_mod:
         # Init API key only if needed
         if args.add_mod[0] == 'curseforge':
-            init_api_key()
+            init_api_key("add")
         init_server_version()
         add_mod(args.add_mod[0], args.add_mod[1])
     elif args.check_updates:
-        init_api_key()
+        init_api_key("check")
         init_server_version()
         check_updates(args.check_updates)
     elif args.help:
