@@ -16,6 +16,12 @@ Minecraft Mod Manager is a Python script that allows you to keep track of all th
 
 ## Usage
 
+### Interactive Mode
+
+Passing no command line arguments to the program will place you into an interactive mode which is better suited for users less comforatble with the command line.
+
+### CLI Mode
+
 The script provides several command-line options for managing your Minecraft mods. Here are the available options:
 
 | Option                  | Required Value(s)         | Description                                                                                                                                                  |

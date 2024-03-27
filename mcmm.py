@@ -620,8 +620,7 @@ def interactive_mode():
     7.  Print server version
     8.  Set server verion
     9.  Set Curseforge API key
-    10. Get help
-    11. Quit
+    10. Quit
         ''')
 
         option = input("Enter the number of the option: ")
@@ -680,9 +679,6 @@ def interactive_mode():
                 set_curseforge_api_key(key)
 
             case '10':
-                print_usage()
-
-            case '11':
                 exit()
 
 
