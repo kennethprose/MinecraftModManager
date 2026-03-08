@@ -4,10 +4,9 @@ import json
 import os
 import requests
 import sys
-import datetime
 
 
-version = 'v240327'
+version = 'v260308'
 
 
 def check_new_version():
@@ -15,14 +14,8 @@ def check_new_version():
         "https://api.github.com/repos/kennethprose/MinecraftModManager/releases/latest")
     latest_version = response.json()["tag_name"]
     if latest_version > version:
-        message(
+        print(
             f"[ALERT] A new verison of MCModManager is available. Download {latest_version} here: https://github.com/kennethprose/MinecraftModManager/releases/tag/{latest_version}")
-
-
-def message(message=""):
-    current_time = datetime.datetime.now()
-    formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{formatted_time}] {message}")
 
 
 def modrinth_api_call(endpoint):
@@ -49,7 +42,7 @@ def curseforge_api_call(endpoint):
 
 def download_mod(url, filename):
     if debug_mode:
-        message("Downloading " + filename)
+        print("Downloading " + filename)
     if not os.path.exists("mods"):
         os.makedirs("mods")
     filepath = os.path.join("mods", filename)
@@ -59,18 +52,18 @@ def download_mod(url, filename):
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
     if debug_mode:
-        message("Downloaded " + filename)
+        print("Downloaded " + filename)
 
 
 def init_json_file():
     if os.path.exists("mcmm.json"):
         return
     else:
-        message("[ERROR] Could not find mcmm.json")
+        print("[ERROR] Could not find mcmm.json")
         with open("mcmm.json", "w") as file:
             data = {"mods": []}
             json.dump(data, file, indent=4)
-        message("mcmm.json has been created.")
+        print("mcmm.json has been created.")
         exit()
 
 
@@ -79,7 +72,7 @@ def init_server_version():
         data = json.load(file)
 
     if "server_version" not in data:
-        message("[ERROR]: Server version not set. Set the server version using the -s flag. See usage (-h) for more information.")
+        print("[ERROR]: Server version not set. Please check documentation.")
         exit()
 
 
@@ -105,7 +98,7 @@ def init_api_key(caller):
     elif caller == 'check' and not check_for_curseforge_mods():
         return
     else:
-        message("[ERROR]: Curseforge API key not set. Set API key by using the -k flag. See usage (-h) for more information.")
+        print("[ERROR]: Curseforge API key not set. Please check documentation.")
         sys.exit()
 
 
@@ -123,7 +116,7 @@ def check_version_exists(version):
 def set_server_version(version):
 
     if not check_version_exists(version):
-        message("[ERROR]: " + version + " is not a valid Minecraft version")
+        print("[ERROR]: " + version + " is not a valid Minecraft version")
         exit()
 
     with open("mcmm.json", "r") as file:
@@ -164,7 +157,7 @@ def add_mod(source, mods_to_add):
     for slug_or_id in mod_list:
 
         if check_mod_exists(slug_or_id):
-            message(f"{slug_or_id} is already installed")
+            print(f"{slug_or_id} is already installed")
             continue
 
         with open("mcmm.json", "r") as file:
@@ -175,7 +168,7 @@ def add_mod(source, mods_to_add):
         if source == 'modrinth':
             mod_info = modrinth_api_call("/project/" + slug_or_id)
             if mod_info == None:
-                message(
+                print(
                     f"[ERROR]: {slug_or_id} not found. Make sure the slug/ID is correct.")
                 continue
             mod_name = mod_info["title"]
@@ -184,18 +177,18 @@ def add_mod(source, mods_to_add):
         elif source == 'curseforge':
             mod_info = curseforge_api_call("/v1/mods/" + slug_or_id)
             if mod_info == None:
-                message(
+                print(
                     f"[ERROR]: {slug_or_id} not found. Make sure the ID is correct.")
                 continue
             mod_name = mod_info["data"]["name"]
             mod_id = str(mod_info["data"]["id"])
             mod_slug = mod_info["data"]["slug"]
         else:
-            message("[ERROR] \'" + source + "\' is not a valid source")
+            print("[ERROR] \'" + source + "\' is not a valid source")
             continue
 
         if debug_mode:
-            message("Adding mod: " + mod_name)
+            print("Adding mod: " + mod_name)
 
         if source == 'modrinth':
             mod_versions = modrinth_api_call(
@@ -231,7 +224,7 @@ def add_mod(source, mods_to_add):
         with open("mcmm.json", "w") as file:
             json.dump(data, file, indent=4)
 
-        message(mod_name + " installed")
+        print(mod_name + " installed")
 
 
 def remove_mod_wrapper(mods_to_remove):
@@ -247,7 +240,7 @@ def remove_mod_wrapper(mods_to_remove):
 def remove_mod(slug_or_id):
 
     if debug_mode:
-        message(f"Removing {slug_or_id}")
+        print(f"Removing {slug_or_id}")
 
     with open("mcmm.json", "r") as file:
         data = json.load(file)
@@ -266,10 +259,10 @@ def remove_mod(slug_or_id):
             with open("mcmm.json", "w") as file:
                 json.dump(data, file, indent=4)
 
-            message(f"Successfully removed {mod_name}")
+            print(f"Successfully removed {mod_name}")
             return
 
-    message(f"{slug_or_id} not found")
+    print(f"{slug_or_id} not found")
 
 
 def remove_all_mods():
@@ -333,8 +326,10 @@ def get_curseforge_mod_info(mod_id, version, mod_version_id=None):
 def check_updates(version):
 
     if not check_version_exists(version):
-        message("[ERROR]: " + version + " is not a valid Minecraft version")
+        print("[ERROR]: " + version + " is not a valid Minecraft version")
         exit()
+
+    print("Checking for updates for Minecraft " + version + "...")
 
     with open("mcmm.json", "r") as file:
         data = json.load(file)
@@ -398,16 +393,13 @@ def check_updates(version):
     with open("mcmm.json", "w") as file:
         json.dump(data, file, indent=4)
 
-    message()
-    message("Updates available for:")
+    print("\nUpdates available for:")
     for mod in mods_with_updates:
-        message(mod)
+        print(mod)
 
-    message()
-    message("No updates for:")
+    print("\nNo updates for:")
     for mod in mods_without_updates:
-        message(mod)
-    message()
+        print(mod)
 
 
 def check_pending_updates(version):
@@ -444,12 +436,12 @@ def remove_mods_without_updates():
 def update_mods(version):
 
     if not check_version_exists(version):
-        message("[ERROR]: " + version + " is not a valid Minecraft version")
+        print("[ERROR]: " + version + " is not a valid Minecraft version")
         exit()
 
     pending_updates = check_pending_updates(version)
     if pending_updates == 0:
-        message("\nThere are no pending updates.\nCheck for updates by using the -c flag.\nSee usage (-h) for more information.\n")
+        print("\nThere are no pending updates. You must check for updates for the desired version first.\n")
         sys.exit()
 
     with open("mcmm.json", "r") as file:
@@ -488,7 +480,7 @@ def update_mods(version):
                 # Remove pending update data
                 del mod["update"]
 
-                message(mod["mod_name"] + " has been updated")
+                print(mod["mod_name"] + " has been updated")
 
     with open("mcmm.json", "w") as file:
         json.dump(data, file, indent=4)
@@ -502,13 +494,10 @@ def list_mods():
         data = json.load(file)
         mods = data["mods"]
 
-    message()
-    message("Installed Mods:")
+    print("\nInstalled Mods:")
 
     for mod in mods:
-        message(mod["mod_name"])
-
-    message()
+        print(mod["mod_name"])
 
 
 def generate_file_sha1_hash(file_path):
@@ -530,7 +519,7 @@ def import_mods():
             mod_info = modrinth_api_call('/version_file/' + sha1_hash)
 
             if mod_info == None:
-                message('Could not identify the mod at ' + file_path)
+                print('Could not identify the mod at ' + file_path)
             else:
 
                 # If mod is found, get relevant info
@@ -546,7 +535,7 @@ def import_mods():
 
                 # Check if mod is already documented
                 if check_mod_exists(mod_id):
-                    message(mod_name + " is already installed")
+                    print(mod_name + " is already installed")
                 else:
 
                     # Add mod info to json
@@ -570,36 +559,14 @@ def import_mods():
                     with open("mcmm.json", "w") as file:
                         json.dump(data, file, indent=4)
 
-                    message(mod_name + " has been imported")
+                    print(mod_name + " has been imported")
 
 
 def print_server_version():
     with open("mcmm.json", "r") as file:
         data = json.load(file)
         server_version = data["server_version"]
-        message(server_version)
-
-
-def print_usage():
-    print('''
-    usage: python mcmm.py [-h] [-a [source] [id_or_slug]] [-c [version]] [-i] [-k [api_key]] [-l] [-r [id_or_slug]] [-s [version]] [-u [version]] [--debug]
-
-    A tool to download, update, and manage mods for your Minecraft server using the Modrinth and CursgeForge APIs.
-
-    Flag                    Args                Description
-    -------------------------------------------------------------------------------------------------------------------------------------------------
-    -a, --add-mod           [Source] [ID|Slug]  Fetch and install the mod with the given ID or slug from the desired source (Modrinth or CurseForge).
-    -c, --check-updates     [VERSION]           Check to see if mods have new versions available for specified Minecraft version. 
-    -h, --help                                  Prints usage.
-    -i, --import-mods                           Scan the mods folder and import any mods that not already monitored. (Only works with Modrinth mods)
-    -k, --api-key                               Set the API key that is required for CurseForge.
-    -l, --list-mods                             Lists all of the mods that are currently installed.
-    -r, --remove-mod        [ID|Slug|ALL]       Remove the mod with the specified ID or slug.
-    -s, --set-version       [VERSION]           Change the stored value of your Minecraft server version to VERSION.
-    -u, --update-mods       [VERSION]           Removes any mods without pending updates to the desired version and updates the rest.
-    -v, --print-version                         Prints the current version of the server and mods.
-    --debug                                     Display more information to console. Must be passed as the last argument in your command.
-    ''')
+        print(server_version)
 
 
 def interactive_mode():
@@ -690,61 +657,87 @@ def main():
     # Create the argument parser
     parser = argparse.ArgumentParser(
         prog="python mcmm.py",
-        description="A tool to download, update, and manage mods for your Minecraft server using the Modrinth and CursgeForge APIs.",
-        add_help=False)
+        description="A tool to download, update, and manage mods for your Minecraft server using the Modrinth and CurseForge APIs.")
 
-    # Add command line arguments and their respective handlers
-    parser.add_argument("-a", "--add-mod", nargs=2,
-                        metavar=("[source]", "[id_or_slug]"))
-    parser.add_argument("-c", "--check-updates", metavar="[version]")
-    parser.add_argument("-h", "--help", action="store_true")
-    parser.add_argument("-i", "--import-mods", action="store_true")
-    parser.add_argument("-k", "--api-key", metavar="[api_key]")
-    parser.add_argument("-l", "--list-mods", action="store_true")
-    parser.add_argument("-r", "--remove-mod", metavar="[id_or_slug]")
-    parser.add_argument("-s", "--set-version", metavar="[version]")
-    parser.add_argument("-u", "--update-mods", metavar="[version]")
-    parser.add_argument("-v", "--print-version",  action="store_true")
-    parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--debug", action="store_true", help="Enable debug output")
 
-    # Parse the arguments from the command line
+    subparsers = parser.add_subparsers(dest="command")
+
+    p = subparsers.add_parser("add", help="Add mod")
+    p.add_argument("source", choices=["modrinth", "curseforge"], help="Repository to add mod from")
+    p.add_argument("id_or_slug", help="Mod id or slug (comma-separated supported)")
+
+    p = subparsers.add_parser("check", help="Check for updates")
+    p.add_argument("version", nargs="?", help="Minecraft version to check (defaults to server version)")
+
+    p = subparsers.add_parser("update", help="Update mods")
+    p.add_argument("version", help="Desired Minecraft version")
+
+    p = subparsers.add_parser("remove", help="Remove mod(s)")
+    p.add_argument("id_or_slug", help="IDs/slugs (comma-separated supported), or ALL to remove all mods")
+
+    subparsers.add_parser("import", help="Import mods from ./mods")
+    subparsers.add_parser("list", help="List installed mods")
+
+    p = subparsers.add_parser("set-version", help="Set server Minecraft version")
+    p.add_argument("version", help="Version to set")
+
+    p = subparsers.add_parser("set-api-key", help="Set CurseForge API key")
+    p.add_argument("key", help="API key")
+
+    subparsers.add_parser("version", help="Print server version")
+
     args = parser.parse_args()
 
-    # Check if --debug mode is enabled
-    global debug_mode
-    debug_mode = args.debug
+    # Dispatch commands
+    def run_command(args):
+        global debug_mode
+        debug_mode = args.debug
 
-    # Check which command was invoked and execute the corresponding function
-    if args.add_mod:
-        # Init API key only if needed
-        if args.add_mod[0] == 'curseforge':
-            init_api_key("add")
-        init_server_version()
-        add_mod(args.add_mod[0], args.add_mod[1])
-    elif args.check_updates:
-        init_api_key("check")
-        init_server_version()
-        check_updates(args.check_updates)
-    elif args.help:
-        print_usage()
-    elif args.import_mods:
-        import_mods()
-    elif args.api_key:
-        set_curseforge_api_key(args.api_key)
-    elif args.list_mods:
-        list_mods()
-    elif args.remove_mod:
-        remove_mod_wrapper(args.remove_mod)
-    elif args.set_version:
-        set_server_version(args.set_version)
-    elif args.update_mods:
-        init_server_version()
-        update_mods(args.update_mods)
-    elif args.print_version:
-        print_server_version()
-    else:
-        # If no argument was provided or unrecognized argument, enter interactive mode
-        interactive_mode()
+        if args.command == "add":
+            if args.source == 'curseforge':
+                init_api_key("add")
+            init_server_version()
+            add_mod(args.source, args.id_or_slug)
+
+        elif args.command == "check":
+            init_api_key("check")
+            init_server_version()
+            if args.version:
+                check_updates(args.version)
+            else:
+                # use stored server version
+                with open("mcmm.json", "r") as f:
+                    data = json.load(f)
+                check_updates(data.get("server_version"))
+
+        elif args.command == "update":
+            init_server_version()
+            update_mods(args.version)
+
+        elif args.command == "remove":
+            remove_mod_wrapper(args.id_or_slug)
+
+        elif args.command == "import":
+            import_mods()
+
+        elif args.command == "list":
+            list_mods()
+
+        elif args.command == "set-version":
+            set_server_version(args.version)
+
+        elif args.command == "set-api-key":
+            set_curseforge_api_key(args.key)
+
+        elif args.command == "version":
+            print_server_version()
+
+        else:
+            # No command given -> interactive mode
+            interactive_mode()
+
+    run_command(args)
 
 
 if __name__ == "__main__":
