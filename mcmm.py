@@ -2,6 +2,7 @@ import argparse
 import hashlib
 import json
 import os
+from urllib import response
 import requests
 import sys
 
@@ -10,18 +11,29 @@ version = 'v260308'
 
 
 def check_new_version():
-    response = requests.get(
-        "https://api.github.com/repos/kennethprose/MinecraftModManager/releases/latest")
-    latest_version = response.json()["tag_name"]
-    if latest_version > version:
+    try:
+        response = requests.get(
+            "https://api.github.com/repos/kennethprose/MinecraftModManager/releases/latest",
+            timeout=5)
+        response.raise_for_status()
+    except requests.exceptions.RequestException:
+        # Can't reach GitHub, fail quietly
+        return
+    
+    latest_version = response.json().get("tag_name")
+    if latest_version and latest_version > version:
         print(
             f"[ALERT] A new verison of MCModManager is available. Download {latest_version} here: https://github.com/kennethprose/MinecraftModManager/releases/tag/{latest_version}")
-
 
 def modrinth_api_call(endpoint):
     base_url = "https://api.modrinth.com/v2"
     url = base_url + endpoint
-    response = requests.get(url)
+    try:
+        response = requests.get(url, timeout=10)
+    except requests.exceptions.RequestException as e:
+        if debug_mode:
+            print(f"[ERROR]: Modrinth API request failed: {e}")
+        return None
     if response.status_code == 200:
         return response.json()
     else:
@@ -33,7 +45,12 @@ def curseforge_api_call(endpoint):
     url = base_url + endpoint
     headers = {
         "x-api-key": curseforge_api_key}
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+    except requests.exceptions.RequestException as e:
+        if debug_mode:
+            print(f"[ERROR]: CurseForge API request failed: {e}")
+        return None
     if response.status_code == 200:
         return response.json()
     else:
@@ -46,11 +63,17 @@ def download_mod(url, filename):
     if not os.path.exists("mods"):
         os.makedirs("mods")
     filepath = os.path.join("mods", filename)
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(filepath, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+    try:
+        with requests.get(url, stream=True, timeout=15) as r:
+            r.raise_for_status()
+            with open(filepath, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+    except requests.exceptions.RequestException as e:
+        # Clean up partial/corrupt file
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        raise Exception(f"Failed to download {filename}: {e}")
     if debug_mode:
         print("Downloaded " + filename)
 
@@ -223,9 +246,13 @@ def add_mod(source, mods_to_add):
             "source": source
         }
 
-        mods.append(new_mod)
+        try:
+            download_mod(download_url, filename)
+        except Exception as e:
+            print(f"[ERROR]: Failed to add {mod_name}: {e}")
+            continue
 
-        download_mod(download_url, filename)
+        mods.append(new_mod)
 
         with open("mcmm.json", "w") as file:
             json.dump(data, file, indent=4)
