@@ -129,6 +129,10 @@ def check_version_exists(version):
 
     valid_versions = modrinth_api_call("/tag/game_version")
 
+    # Check if the API call was successful
+    if valid_versions is None:
+        return None
+
     for v in valid_versions:
         if v["version"] == version:
             return True
@@ -138,8 +142,12 @@ def check_version_exists(version):
 
 def set_server_version(version):
 
-    if not check_version_exists(version):
-        print("[ERROR]: " + version + " is not a valid Minecraft version")
+    version_status = check_version_exists(version)
+    if version_status is None:
+        print(f"[ERROR]: Could not verify Minecraft version {version} exists.")
+        exit()
+    elif not version_status:
+        print(f"[ERROR]: {version} is not a valid Minecraft version")
         exit()
 
     with open("mcmm.json", "r") as file:
@@ -362,8 +370,12 @@ def get_curseforge_mod_info(mod_id, version, mod_version_id=None):
 
 def check_updates(version):
 
-    if not check_version_exists(version):
-        print("[ERROR]: " + version + " is not a valid Minecraft version")
+    version_status = check_version_exists(version)
+    if version_status is None:
+        print(f"[ERROR]: Could not verify Minecraft version {version} exists.")
+        exit()
+    elif not version_status:
+        print(f"[ERROR]: {version} is not a valid Minecraft version")
         exit()
 
     print("Checking for updates for Minecraft " + version + "...")
@@ -472,8 +484,12 @@ def remove_mods_without_updates():
 
 def update_mods(version):
 
-    if not check_version_exists(version):
-        print("[ERROR]: " + version + " is not a valid Minecraft version")
+    version_status = check_version_exists(version)
+    if version_status is None:
+        print(f"[ERROR]: Could not verify Minecraft version {version} exists.")
+        exit()
+    elif not version_status:
+        print(f"[ERROR]: {version} is not a valid Minecraft version")
         exit()
 
     pending_updates = check_pending_updates(version)
