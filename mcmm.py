@@ -258,7 +258,11 @@ def remove_mod(slug_or_id):
 
             mod_name = mod["mod_name"]
 
-            os.remove(os.path.join("mods", mod["filename"]))
+            filepath = os.path.join("mods", mod["filename"])
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            else:
+                print(f"[WARNING]: {filepath} was already missing from disk. Removing entry from modlist.")
 
             mods.pop(i)
 
