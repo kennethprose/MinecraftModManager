@@ -193,6 +193,9 @@ def add_mod(source, mods_to_add):
         if source == 'modrinth':
             mod_versions = modrinth_api_call(
                 f"/project/{slug_or_id}/version?game_versions=[\"{server_version}\"]&loaders=[\"fabric\"]")
+            if not mod_versions:
+                print(f"[ERROR]: No Fabric release of {mod_name} found for Minecraft {server_version}. Skipping.")
+                continue
             most_recent_version = mod_versions[0]
             mod_version_id = most_recent_version["id"]
             filename = most_recent_version["files"][0]["filename"]
@@ -201,6 +204,9 @@ def add_mod(source, mods_to_add):
         elif source == 'curseforge':
             mod_versions = curseforge_api_call(
                 f"/v1/mods/{slug_or_id}/files?gameVersion={server_version}&modLoaderType=4")
+            if not mod_versions or not mod_versions.get("data"):
+                print(f"[ERROR]: No Fabric release of {mod_name} found for Minecraft {server_version}. Skipping.")
+                continue
             most_recent_version = mod_versions["data"][0]
             mod_version_id = str(most_recent_version["id"])
             filename = most_recent_version["fileName"]
