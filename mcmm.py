@@ -2,12 +2,12 @@ import argparse
 import hashlib
 import json
 import os
-from urllib import response
+from urllib.parse import quote
 import requests
 import sys
 
 
-version = 'v260308'
+version = 'v260802'
 
 
 def check_new_version():
@@ -25,11 +25,12 @@ def check_new_version():
         print(
             f"[ALERT] A new verison of MCModManager is available. Download {latest_version} here: https://github.com/kennethprose/MinecraftModManager/releases/tag/{latest_version}")
 
-def modrinth_api_call(endpoint):
+
+def modrinth_api_call(endpoint, params=None):
     base_url = "https://api.modrinth.com/v2"
     url = base_url + endpoint
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, params=params, timeout=10)
     except requests.exceptions.RequestException as e:
         if debug_mode:
             print(f"[ERROR]: Modrinth API request failed: {e}")
@@ -40,13 +41,13 @@ def modrinth_api_call(endpoint):
         return None
 
 
-def curseforge_api_call(endpoint):
+def curseforge_api_call(endpoint, params=None):
     base_url = "https://api.curseforge.com"
     url = base_url + endpoint
     headers = {
         "x-api-key": curseforge_api_key}
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, params=params, timeout=10)
     except requests.exceptions.RequestException as e:
         if debug_mode:
             print(f"[ERROR]: CurseForge API request failed: {e}")
@@ -87,7 +88,7 @@ def init_json_file():
             data = {"mods": []}
             json.dump(data, file, indent=4)
         print("mcmm.json has been created.")
-        exit()
+        sys.exit()
 
 
 def init_server_version():
@@ -96,7 +97,7 @@ def init_server_version():
 
     if "server_version" not in data:
         print("[ERROR]: Server version not set. Please check documentation.")
-        exit()
+        sys.exit()
 
 
 def check_for_curseforge_mods():
@@ -145,10 +146,10 @@ def set_server_version(version):
     version_status = check_version_exists(version)
     if version_status is None:
         print(f"[ERROR]: Could not verify Minecraft version {version} exists.")
-        exit()
+        sys.exit()
     elif not version_status:
         print(f"[ERROR]: {version} is not a valid Minecraft version")
-        exit()
+        sys.exit()
 
     with open("mcmm.json", "r") as file:
         data = json.load(file)
@@ -197,7 +198,7 @@ def add_mod(source, mods_to_add):
             mods = data["mods"]
 
         if source == 'modrinth':
-            mod_info = modrinth_api_call("/project/" + slug_or_id)
+            mod_info = modrinth_api_call("/project/" + quote(slug_or_id, safe=""))
             if mod_info == None:
                 print(
                     f"[ERROR]: {slug_or_id} not found. Make sure the slug/ID is correct.")
@@ -206,7 +207,7 @@ def add_mod(source, mods_to_add):
             mod_id = mod_info["id"]
             mod_slug = mod_info["slug"]
         elif source == 'curseforge':
-            mod_info = curseforge_api_call("/v1/mods/" + slug_or_id)
+            mod_info = curseforge_api_call("/v1/mods/" + quote(slug_or_id, safe=""))
             if mod_info == None:
                 print(
                     f"[ERROR]: {slug_or_id} not found. Make sure the ID is correct.")
@@ -223,10 +224,14 @@ def add_mod(source, mods_to_add):
 
         if source == 'modrinth':
             mod_versions = modrinth_api_call(
-                f"/project/{slug_or_id}/version?game_versions=[\"{server_version}\"]&loaders=[\"fabric\"]")
+                f"/project/{quote(slug_or_id, safe='')}/version",
+                params={"game_versions": f'["{server_version}"]', "loaders": '["fabric"]'}
+            )
+
             if not mod_versions:
                 print(f"[ERROR]: No Fabric release of {mod_name} found for Minecraft {server_version}. Skipping.")
                 continue
+
             most_recent_version = mod_versions[0]
             mod_version_id = most_recent_version["id"]
             filename = most_recent_version["files"][0]["filename"]
@@ -234,10 +239,14 @@ def add_mod(source, mods_to_add):
 
         elif source == 'curseforge':
             mod_versions = curseforge_api_call(
-                f"/v1/mods/{slug_or_id}/files?gameVersion={server_version}&modLoaderType=4")
+                f"/v1/mods/{quote(slug_or_id, safe='')}/files",
+                params={"gameVersion": server_version, "modLoaderType": 4}
+            )
+
             if not mod_versions or not mod_versions.get("data"):
                 print(f"[ERROR]: No Fabric release of {mod_name} found for Minecraft {server_version}. Skipping.")
                 continue
+
             most_recent_version = mod_versions["data"][0]
             mod_version_id = str(most_recent_version["id"])
             filename = most_recent_version["fileName"]
@@ -322,7 +331,9 @@ def remove_all_mods():
 def get_modrinth_mod_info(mod_slug, version, mod_version_id=None):
 
     mod_versions = modrinth_api_call(
-        f"/project/{mod_slug}/version?game_versions=[\"{version}\"]&loaders=[\"fabric\"]")
+        f"/project/{quote(mod_slug, safe='')}/version",
+        params={"game_versions": f'["{version}"]', "loaders": '["fabric"]'}
+    )
 
     if mod_versions:
         newest_mod_version = mod_versions[0]
@@ -346,7 +357,9 @@ def get_modrinth_mod_info(mod_slug, version, mod_version_id=None):
 def get_curseforge_mod_info(mod_id, version, mod_version_id=None):
 
     mod_versions = curseforge_api_call(
-        f"/v1/mods/{mod_id}/files?gameVersion={version}&modLoaderType=4")
+        f"/v1/mods/{quote(str(mod_id), safe='')}/files",
+        params={"gameVersion": version, "modLoaderType": 4}
+    )
 
     if mod_versions:
         if len(mod_versions["data"]) > 0:
@@ -373,10 +386,10 @@ def check_updates(version):
     version_status = check_version_exists(version)
     if version_status is None:
         print(f"[ERROR]: Could not verify Minecraft version {version} exists.")
-        exit()
+        sys.exit()
     elif not version_status:
         print(f"[ERROR]: {version} is not a valid Minecraft version")
-        exit()
+        sys.exit()
 
     print("Checking for updates for Minecraft " + version + "...")
 
@@ -487,10 +500,10 @@ def update_mods(version):
     version_status = check_version_exists(version)
     if version_status is None:
         print(f"[ERROR]: Could not verify Minecraft version {version} exists.")
-        exit()
+        sys.exit()
     elif not version_status:
         print(f"[ERROR]: {version} is not a valid Minecraft version")
-        exit()
+        sys.exit()
 
     pending_updates = check_pending_updates(version)
     if pending_updates == 0:
@@ -707,7 +720,7 @@ def interactive_mode():
                 set_curseforge_api_key(key)
 
             case '10':
-                exit()
+                sys.exit()
 
 
 def main():
