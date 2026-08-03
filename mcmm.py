@@ -464,12 +464,20 @@ def update_mods(version):
         for mod in mods:
             if "update" in mod:
 
-                # Remove old file
-                os.remove(os.path.join("mods", mod["filename"]))
+                new_filename = mod["update"]["new_filename"]
+                old_filepath = os.path.join("mods", mod["filename"])
+                new_filepath = os.path.join("mods", new_filename)
 
                 # Download new file
-                download_mod(mod["update"]["new_download_url"],
-                             mod["update"]["new_filename"])
+                try:
+                    download_mod(mod["update"]["new_download_url"], new_filename)
+                except Exception as e:
+                    print(f"[ERROR]: Failed to download update for {mod['mod_name']}: {e}")
+                    continue
+
+                # Remove old file
+                if old_filepath != new_filepath and os.path.exists(old_filepath):
+                    os.remove(old_filepath)
 
                 # Copy 'update' data to primary data variables
                 mod["mod_version_id"] = mod["update"]["new_version_id"]
@@ -480,10 +488,10 @@ def update_mods(version):
                 # Remove pending update data
                 del mod["update"]
 
-                print(mod["mod_name"] + " has been updated")
+                with open("mcmm.json", "w") as file:
+                    json.dump(data, file, indent=4)
 
-    with open("mcmm.json", "w") as file:
-        json.dump(data, file, indent=4)
+                print(mod["mod_name"] + " has been updated")
 
     set_server_version(version)
 
@@ -494,7 +502,7 @@ def list_mods():
         data = json.load(file)
         mods = data["mods"]
 
-    print("\nInstalled Mods:")
+    print("Installed Mods:")
 
     for mod in mods:
         print(mod["mod_name"])
