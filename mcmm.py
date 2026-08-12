@@ -7,7 +7,76 @@ import requests
 import sys
 
 
-version = 'v260811'
+version = 'v260812'
+
+
+def get_release_asset_digest(release_tag):
+    try:
+        response = requests.get(
+            f"https://api.github.com/repos/kennethprose/MinecraftModManager/releases/tags/{release_tag}",
+            timeout=10)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR]: Failed to fetch release info: {e}")
+        return None
+
+    release_info = response.json()
+
+    for asset in release_info.get("assets", []):
+        if asset["name"] == 'mcmm.py':
+            digest = asset.get("digest")
+            if digest and digest.startswith("sha256:"):
+                return digest.split(":", 1)[1].lower()
+
+    return None
+
+
+def self_update(latest_version):
+    download_url = f"https://github.com/kennethprose/MinecraftModManager/releases/download/{latest_version}/mcmm.py"
+
+    current_script_path = os.path.abspath(__file__)
+    temp_path = current_script_path + ".tmp"
+
+    expected_hash = get_release_asset_digest(latest_version)
+    if not expected_hash:
+        print("[ERROR]: Could not retrieve checksum for mcmm.py from the release. Update aborted.")
+        return False
+
+    try:
+        with requests.get(download_url, stream=True, timeout=15) as r:
+            r.raise_for_status()
+            with open(temp_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+    except requests.exceptions.RequestException as e:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        print(f"[ERROR]: Failed to download update: {e}")
+        return False
+
+    actual_hash = generate_file_hash(temp_path, 'sha256')
+    if actual_hash != expected_hash:
+        os.remove(temp_path)
+        print(
+            f"[ERROR]: Checksum mismatch — downloaded file does not match expected hash. "
+            f"Update aborted for safety (expected {expected_hash[:12]}..., got {actual_hash[:12]}...)")
+        return False
+
+    try:
+        original_mode = os.stat(current_script_path).st_mode
+    except OSError:
+        original_mode = None
+
+    os.replace(temp_path, current_script_path)
+
+    if original_mode is not None:
+        try:
+            os.chmod(current_script_path, original_mode)
+        except OSError:
+            pass
+
+    print(f"Updated to {latest_version}. Please re-run your command.")
+    return True
 
 
 def check_new_version():
@@ -22,9 +91,15 @@ def check_new_version():
     
     latest_version = response.json().get("tag_name")
     if latest_version and latest_version > version:
-        print(
-            f"[ALERT] A new verison of MCModManager is available. Download {latest_version} here: https://github.com/kennethprose/MinecraftModManager/releases/tag/{latest_version}")
+        print(f"[ALERT] A new version of MCModManager is available: {latest_version} (you have {version})")
 
+        if sys.stdin.isatty():
+            choice = input("Would you like to update now? (yes/no): ")
+            if choice.lower() == "yes":
+                if self_update(latest_version):
+                    sys.exit()
+        else:
+            print(f"Download manually: https://github.com/kennethprose/MinecraftModManager/releases/tag/{latest_version}")
 
 def modrinth_api_call(endpoint, params=None):
     base_url = "https://api.modrinth.com/v2"
