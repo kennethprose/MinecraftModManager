@@ -7,7 +7,7 @@ import requests
 import sys
 
 
-version = 'v260802'
+version = 'v260811'
 
 
 def check_new_version():
@@ -58,7 +58,15 @@ def curseforge_api_call(endpoint, params=None):
         return None
 
 
-def download_mod(url, filename):
+def generate_file_hash(file_path, algorithm='sha512'):
+    hash_obj = hashlib.new(algorithm)
+    with open(file_path, 'rb') as file:
+        for chunk in iter(lambda: file.read(4096), b''):
+            hash_obj.update(chunk)
+    return hash_obj.hexdigest()
+
+
+def download_mod(url, filename, expected_hash=None, hash_algorithm='sha512'):
     if debug_mode:
         print("Downloading " + filename)
     if not os.path.exists("mods"):
@@ -75,6 +83,13 @@ def download_mod(url, filename):
         if os.path.exists(filepath):
             os.remove(filepath)
         raise Exception(f"Failed to download {filename}: {e}")
+    if expected_hash:
+        actual_hash = generate_file_hash(filepath, hash_algorithm)
+        if actual_hash.lower() != expected_hash.lower():
+            os.remove(filepath)
+            raise Exception(
+                f"Hash mismatch for {filename} — file may be corrupted or tampered with "
+                f"(expected {expected_hash[:12]}..., got {actual_hash[:12]}...)")
     if debug_mode:
         print("Downloaded " + filename)
 
@@ -119,7 +134,7 @@ def init_api_key(caller):
     if "curseforge_api_key" in data:
         global curseforge_api_key
         curseforge_api_key = data["curseforge_api_key"]
-    elif caller == 'check' and not check_for_curseforge_mods():
+    elif (caller == 'check' or caller == 'update') and not check_for_curseforge_mods():
         return
     else:
         print("[ERROR]: Curseforge API key not set. Please check documentation.")
@@ -236,6 +251,12 @@ def add_mod(source, mods_to_add):
             mod_version_id = most_recent_version["id"]
             filename = most_recent_version["files"][0]["filename"]
             download_url = most_recent_version["files"][0]["url"]
+            file_hashes = most_recent_version["files"][0].get("hashes", {})
+            expected_hash = file_hashes.get("sha512")
+            hash_algorithm = 'sha512'
+            if not expected_hash:
+                expected_hash = file_hashes.get("sha1")
+                hash_algorithm = 'sha1'
 
         elif source == 'curseforge':
             mod_versions = curseforge_api_call(
@@ -251,6 +272,10 @@ def add_mod(source, mods_to_add):
             mod_version_id = str(most_recent_version["id"])
             filename = most_recent_version["fileName"]
             download_url = most_recent_version["downloadUrl"]
+            file_hashes = most_recent_version.get("hashes", [])
+            expected_hash = file_hashes[0]["value"] if file_hashes else None
+            hash_algorithm_id = file_hashes[0]["algo"] if file_hashes else None
+            hash_algorithm = 'sha1' if hash_algorithm_id == 1 else 'md5' if hash_algorithm_id == 2 else None
 
         new_mod = {
             "mod_name": mod_name,
@@ -264,7 +289,7 @@ def add_mod(source, mods_to_add):
         }
 
         try:
-            download_mod(download_url, filename)
+            download_mod(download_url, filename, expected_hash=expected_hash, hash_algorithm=hash_algorithm)
         except Exception as e:
             print(f"[ERROR]: Failed to add {mod_name}: {e}")
             continue
@@ -534,9 +559,25 @@ def update_mods(version):
                 old_filepath = os.path.join("mods", mod["filename"])
                 new_filepath = os.path.join("mods", new_filename)
 
+                # Fetch expected hash of new mod version file
+                if mod["source"] == 'modrinth':
+                    new_version = modrinth_api_call(f"/version/{mod['update']['new_version_id']}")
+                    new_version_hashes = new_version["files"][0].get("hashes", {})
+                    expected_hash = new_version_hashes.get("sha512")
+                    hash_algorithm = 'sha512'
+                    if not expected_hash:
+                        expected_hash = new_version_hashes.get("sha1")
+                        hash_algorithm = 'sha1'
+                elif mod["source"] == 'curseforge':
+                    new_version = curseforge_api_call(f"/v1/mods/{mod['mod_id']}/files/{mod['update']['new_version_id']}")
+                    new_version_hashes = new_version["data"].get("hashes", [])
+                    expected_hash = new_version_hashes[0]["value"] if new_version_hashes else None
+                    hash_algorithm_id = new_version_hashes[0]["algo"] if new_version_hashes else None
+                    hash_algorithm = 'sha1' if hash_algorithm_id == 1 else 'md5' if hash_algorithm_id == 2 else None
+
                 # Download new file
                 try:
-                    download_mod(mod["update"]["new_download_url"], new_filename)
+                    download_mod(mod["update"]["new_download_url"], new_filename, expected_hash=expected_hash, hash_algorithm=hash_algorithm)
                 except Exception as e:
                     print(f"[ERROR]: Failed to download update for {mod['mod_name']}: {e}")
                     continue
@@ -574,14 +615,6 @@ def list_mods():
         print(mod["mod_name"])
 
 
-def generate_file_sha1_hash(file_path):
-    sha1_hash = hashlib.sha1()
-    with open(file_path, 'rb') as file:
-        for chunk in iter(lambda: file.read(4096), b''):
-            sha1_hash.update(chunk)
-    return sha1_hash.hexdigest()
-
-
 def import_mods():
     # Iterate over all mods in the mods folder
     for filename in os.listdir('./mods/'):
@@ -589,7 +622,7 @@ def import_mods():
         if os.path.isfile(file_path) and file_path.endswith('.jar'):
 
             # Get the hash of the function and use it to check the modrinth api
-            sha1_hash = generate_file_sha1_hash(file_path)
+            sha1_hash = generate_file_hash(file_path, 'sha1')
             mod_info = modrinth_api_call('/version_file/' + sha1_hash)
 
             if mod_info == None:
@@ -786,6 +819,7 @@ def main():
                 check_updates(data.get("server_version"))
 
         elif args.command == "update":
+            init_api_key("update")
             init_server_version()
             update_mods(args.version)
 
