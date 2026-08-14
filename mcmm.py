@@ -7,7 +7,7 @@ import requests
 import sys
 
 
-version = 'v260812'
+version = 'v260814'
 
 
 def get_release_asset_digest(release_tag):
@@ -684,10 +684,42 @@ def list_mods():
         data = json.load(file)
         mods = data["mods"]
 
-    print("Installed Mods:")
+    if not mods:
+        print("No mods are currently installed.")
+        return
 
+    rows = []
     for mod in mods:
-        print(mod["mod_name"])
+        name = mod["mod_name"]
+        source = mod["source"].capitalize()
+        identifier = mod.get("mod_slug") or mod["mod_id"]
+        current_version = mod["current_version"]
+
+        if "update" in mod:
+            status = f"Update available -> {mod['update']['new_version']}"
+        else:
+            status = "Up to date"
+
+        rows.append((name, source, identifier, current_version, status))
+
+    headers = ("Mod Name", "Source", "Slug/ID", "MC Version", "Status")
+
+    # Column widths based on content
+    col_widths = [
+        max(len(headers[i]), max((len(row[i]) for row in rows), default=0))
+        for i in range(len(headers))
+    ]
+
+    def format_row(row):
+        return "  ".join(str(val).ljust(col_widths[i]) for i, val in enumerate(row))
+
+    pending_count = sum(1 for mod in mods if "update" in mod)
+
+    print(f"Installed Mods ({len(mods)} total, {pending_count} update(s) available):\n")
+    print(format_row(headers))
+    print("  ".join("-" * w for w in col_widths))
+    for row in rows:
+        print(format_row(row))
 
 
 def import_mods():
@@ -756,8 +788,6 @@ def interactive_mode():
     init_json_file()
 
     while True:
-
-        check_new_version()
 
         print('''\nWhat would you like to do?
     1.  Add mod
