@@ -5,6 +5,7 @@ import os
 from urllib.parse import quote
 import requests
 import sys
+import tempfile
 
 
 version = 'v260814'
@@ -147,24 +148,29 @@ def download_mod(url, filename, expected_hash=None, hash_algorithm='sha512'):
     if not os.path.exists("mods"):
         os.makedirs("mods")
     filepath = os.path.join("mods", filename)
+    temp_path = None
     try:
-        with requests.get(url, stream=True, timeout=15) as r:
-            r.raise_for_status()
-            with open(filepath, "wb") as f:
+        with tempfile.NamedTemporaryFile(mode="wb", dir=os.path.dirname(filepath),
+                                         prefix=".mcmm-", suffix=".tmp", delete=False) as f:
+            temp_path = f.name
+            with requests.get(url, stream=True, timeout=15) as r:
+                r.raise_for_status()
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
+
+        if expected_hash:
+            actual_hash = generate_file_hash(temp_path, hash_algorithm)
+            if actual_hash.lower() != expected_hash.lower():
+                raise Exception(
+                    f"Hash mismatch for {filename} — file may be corrupted or tampered with "
+                    f"(expected {expected_hash[:12]}..., got {actual_hash[:12]}...)")
+
+        os.replace(temp_path, filepath)
     except requests.exceptions.RequestException as e:
-        # Clean up partial/corrupt file
-        if os.path.exists(filepath):
-            os.remove(filepath)
         raise Exception(f"Failed to download {filename}: {e}")
-    if expected_hash:
-        actual_hash = generate_file_hash(filepath, hash_algorithm)
-        if actual_hash.lower() != expected_hash.lower():
-            os.remove(filepath)
-            raise Exception(
-                f"Hash mismatch for {filename} — file may be corrupted or tampered with "
-                f"(expected {expected_hash[:12]}..., got {actual_hash[:12]}...)")
+    finally:
+        if temp_path is not None and os.path.exists(temp_path):
+            os.remove(temp_path)
     if debug_mode:
         print("Downloaded " + filename)
 
