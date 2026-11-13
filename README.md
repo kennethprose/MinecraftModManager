@@ -14,6 +14,8 @@ Minecraft Mod Manager is a Python script that allows you to keep track of all th
 1. Ensure you have Python installed on your system.
 2. Clone or download the mcmm.py file to the parent directory of your Minecraft server's mods folder.
 
+On the first run, MCMM prompts for your Minecraft server version and an optional CurseForge API key. Press Enter at the API key prompt to skip it.
+
 ## Usage
 
 ### Interactive Mode

@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 
-version = 'v260814'
+version = 'v261112'
 
 
 def get_release_asset_digest(release_tag):
@@ -179,13 +179,34 @@ def download_mod(url, filename, expected_hash=None, hash_algorithm='sha512'):
 def init_json_file():
     if os.path.exists("mcmm.json"):
         return
-    else:
-        print("[ERROR] Could not find mcmm.json")
-        with open("mcmm.json", "w") as file:
-            data = {"mods": []}
-            json.dump(data, file, indent=4)
-        print("mcmm.json has been created.")
-        sys.exit()
+
+    print("No mcmm.json found. Starting first-time setup.")
+    try:
+        while True:
+            server_version = input("Enter your Minecraft server version: ").strip()
+            if not server_version:
+                print("[ERROR]: A server version is required.")
+                continue
+            if check_version_exists(server_version):
+                break
+            print(f"[ERROR]: {server_version} is not a valid Minecraft version. Please try again.")
+
+        api_key = input("Enter your CurseForge API key (optional; press Enter to skip): ").strip()
+    except ApiError as e:
+        print(f"[ERROR]: Could not verify the server version: {e}")
+        print("Setup incomplete. mcmm.json was not created. Run MCMM again to retry.")
+        sys.exit(1)
+    except (EOFError, KeyboardInterrupt):
+        print("\nSetup cancelled. mcmm.json was not created.")
+        sys.exit(1)
+
+    data = {"mods": [], "server_version": server_version}
+    if api_key:
+        data["curseforge_api_key"] = api_key
+    with open("mcmm.json", "w") as file:
+        json.dump(data, file, indent=4)
+
+    print("mcmm.json has been created. Setup complete.")
 
 
 def init_server_version():
