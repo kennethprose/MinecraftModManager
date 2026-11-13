@@ -38,6 +38,8 @@ The script provides several command-line options for managing your Minecraft mod
 
 \*NOTE: For a mod to be added using CurseForge, you must use the mod ID. The CurseForge API does not support queries using the mod slugs, even though they exist.
 
+Before running `update VERSION`, run `check VERSION` successfully. Failed or interrupted checks preserve previously saved pending updates and block installation until the check succeeds. Existing configurations and configurations with newly added or imported mods require a fresh check. If installation partially fails, successfully updated mods are kept and `update VERSION` can be retried without repeating a completed check.
+
 ## Exmaples
 
 - Adding the Fabric API mod from Modrinth using the mod 'slug':
