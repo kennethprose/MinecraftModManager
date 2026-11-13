@@ -570,6 +570,10 @@ def check_updates(version):
         print(mod)
 
 
+def has_pending_update(mod, version):
+    return mod.get("update", {}).get("new_version") == version
+
+
 def check_pending_updates(version):
 
     pending_updates = 0
@@ -579,14 +583,13 @@ def check_pending_updates(version):
         mods = data["mods"]
 
     for mod in mods:
-        if "update" in mod:
-            if mod["update"]["new_version"] == version:
-                pending_updates += 1
+        if has_pending_update(mod, version):
+            pending_updates += 1
 
     return pending_updates
 
 
-def remove_mods_without_updates():
+def remove_mods_without_updates(version):
 
     with open("mcmm.json", "r") as file:
         data = json.load(file)
@@ -594,7 +597,7 @@ def remove_mods_without_updates():
 
     mods_without_updates = []
     for mod in mods:
-        if "update" not in mod:
+        if mod["current_version"] != version and not has_pending_update(mod, version):
             mods_without_updates.append(mod["mod_slug"])
 
     for mod_slug in mods_without_updates:
@@ -606,32 +609,35 @@ def update_mods(version):
     version_status = check_version_exists(version)
     if version_status is None:
         print(f"[ERROR]: Could not verify Minecraft version {version} exists.")
-        sys.exit()
+        sys.exit(1)
     elif not version_status:
         print(f"[ERROR]: {version} is not a valid Minecraft version")
-        sys.exit()
+        sys.exit(1)
 
     pending_updates = check_pending_updates(version)
-    if pending_updates == 0:
-        print("\nThere are no pending updates. You must check for updates for the desired version first.\n")
-        sys.exit()
 
     with open("mcmm.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
         server_version = data["server_version"]
 
-        # Only need to remove mods without updates if we are upgrading to a newer server version,
-        # as that would lead to mod files for different versions of Minecraft
-        if server_version != version and pending_updates < len(mods):
+        # Allow a retry to finish recording a migration after every mod was saved.
+        if pending_updates == 0 and (not mods or any(mod["current_version"] != version for mod in mods)):
+            print("\nThere are no pending updates. You must check for updates for the desired version first.\n")
+            sys.exit(1)
+
+        # Keep mods that already reached the target version during an earlier attempt.
+        if server_version != version and any(
+                mod["current_version"] != version and not has_pending_update(mod, version)
+                for mod in mods):
 
             confirmation = input(
-                "\nAny mods that do not have pending updates will be removed. Do you want to proceed? (yes/no): ")
+                f"\nMods not installed for Minecraft {version} and without pending updates for it will be removed. Do you want to proceed? (yes/no): ")
 
             if confirmation.lower() != "yes":
                 sys.exit()
 
-            remove_mods_without_updates()
+            remove_mods_without_updates(version)
 
             # Reload state so later saves do not restore removed mods.
             with open("mcmm.json", "r") as updated_file:
@@ -639,33 +645,39 @@ def update_mods(version):
             mods = data["mods"]
 
         for mod in mods:
-            if "update" in mod:
+            if has_pending_update(mod, version):
 
                 new_filename = mod["update"]["new_filename"]
                 old_filepath = os.path.join("mods", mod["filename"])
                 new_filepath = os.path.join("mods", new_filename)
 
-                # Fetch expected hash of new mod version file
-                if mod["source"] == 'modrinth':
-                    new_version = modrinth_api_call(f"/version/{mod['update']['new_version_id']}")
-                    new_version_hashes = new_version["files"][0].get("hashes", {})
-                    expected_hash = new_version_hashes.get("sha512")
-                    hash_algorithm = 'sha512'
-                    if not expected_hash:
-                        expected_hash = new_version_hashes.get("sha1")
-                        hash_algorithm = 'sha1'
-                elif mod["source"] == 'curseforge':
-                    new_version = curseforge_api_call(f"/v1/mods/{mod['mod_id']}/files/{mod['update']['new_version_id']}")
-                    new_version_hashes = new_version["data"].get("hashes", [])
-                    expected_hash = new_version_hashes[0]["value"] if new_version_hashes else None
-                    hash_algorithm_id = new_version_hashes[0]["algo"] if new_version_hashes else None
-                    hash_algorithm = 'sha1' if hash_algorithm_id == 1 else 'md5' if hash_algorithm_id == 2 else None
-
-                # Download new file
                 try:
+                    # Fetch expected hash of new mod version file.
+                    if mod["source"] == 'modrinth':
+                        new_version = modrinth_api_call(f"/version/{mod['update']['new_version_id']}")
+                        if not new_version or not new_version.get("files"):
+                            raise ValueError("Could not retrieve Modrinth file information")
+                        new_version_hashes = new_version["files"][0].get("hashes", {})
+                        expected_hash = new_version_hashes.get("sha512")
+                        hash_algorithm = 'sha512'
+                        if not expected_hash:
+                            expected_hash = new_version_hashes.get("sha1")
+                            hash_algorithm = 'sha1'
+                    elif mod["source"] == 'curseforge':
+                        new_version = curseforge_api_call(f"/v1/mods/{mod['mod_id']}/files/{mod['update']['new_version_id']}")
+                        if not new_version or not new_version.get("data"):
+                            raise ValueError("Could not retrieve CurseForge file information")
+                        new_version_hashes = new_version["data"].get("hashes", [])
+                        expected_hash = new_version_hashes[0]["value"] if new_version_hashes else None
+                        hash_algorithm_id = new_version_hashes[0]["algo"] if new_version_hashes else None
+                        hash_algorithm = 'sha1' if hash_algorithm_id == 1 else 'md5' if hash_algorithm_id == 2 else None
+                    else:
+                        raise ValueError(f"Unknown mod source: {mod['source']}")
+
+                    # Download new file.
                     download_mod(mod["update"]["new_download_url"], new_filename, expected_hash=expected_hash, hash_algorithm=hash_algorithm)
                 except Exception as e:
-                    print(f"[ERROR]: Failed to download update for {mod['mod_name']}: {e}")
+                    print(f"[ERROR]: Failed to update {mod['mod_name']}: {e}")
                     continue
 
                 # Remove old file
@@ -686,7 +698,20 @@ def update_mods(version):
 
                 print(mod["mod_name"] + " has been updated")
 
-    set_server_version(version)
+    incomplete_mods = [
+        mod["mod_name"] for mod in mods
+        if mod["current_version"] != version or has_pending_update(mod, version)
+    ]
+    if incomplete_mods:
+        print(f"[ERROR]: Update to Minecraft {version} is incomplete for: {', '.join(incomplete_mods)}.")
+        print(f"Stored server version remains {server_version}. Successful updates have been saved.")
+        print(f"Run 'update {version}' again to retry the remaining updates.")
+        sys.exit(1)
+
+    # The target was validated above; record it only after all retained mods succeeded.
+    data["server_version"] = version
+    with open("mcmm.json", "w") as file:
+        json.dump(data, file, indent=4)
 
 
 def list_mods():
