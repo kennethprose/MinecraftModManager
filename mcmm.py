@@ -633,6 +633,11 @@ def update_mods(version):
 
             remove_mods_without_updates()
 
+            # Reload state so later saves do not restore removed mods.
+            with open("mcmm.json", "r") as updated_file:
+                data = json.load(updated_file)
+            mods = data["mods"]
+
         for mod in mods:
             if "update" in mod:
 
