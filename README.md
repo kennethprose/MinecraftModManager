@@ -31,7 +31,7 @@ The script provides several command-line options for managing your Minecraft mod
 | `add`       | [Source] [ModIDs/Slugs]\* | Fetch and install the mods with the given IDs or slugs from the desired sources (Modrinth or CurseForge). Mods can also be passed as a comma-delimited list. |
 | `remove`    | [ModIDs/Slugs/ALL]        | Remove the mod with the specified ID or slug. Mods can also be passed as a comma-delimited list. Pass ALL to remove all installed mods at once.              |
 | `check` | [VERSION]                 | Check to see which mods have new versions available for specified Minecraft version.                                                                         |
-| `update`,   | [VERSION]                 | Updates mods to desired version.                                                                                                                             |
+| `update`    | Optional VERSION          | Updates mods for the specified Minecraft version or guides you through updating to the latest stable release.                                                |
 | `list`     |                           | Lists all of the mods that are currently installed.                                                                                                          |
 | `version` |                           | Prints the current version of the server and mods.                                                                                                           |
 | `set-version`   | [VERSION]                 | Change the stored value of your Minecraft server version. (Used when adding new mods)                                                                        |
@@ -39,6 +39,8 @@ The script provides several command-line options for managing your Minecraft mod
 | `set-api-key`       |                           | Set the API key that is required for CurseForge.                                                                                                             |
 
 \*NOTE: For a mod to be added using CurseForge, you must use the mod ID. The CurseForge API does not support queries using the mod slugs, even though they exist.
+
+Run `python mcmm.py update` to look up the latest stable Minecraft release on Modrinth. After you confirm the target version, MCMM checks your installed mods. If any mod has no pending update, MCMM asks again before proceeding. During a version change, mods on a different version without available updates may be removed.
 
 Before running `update VERSION`, run `check VERSION` successfully. Failed or interrupted checks preserve previously saved pending updates and block installation until the check succeeds. Existing configurations and configurations with newly added or imported mods require a fresh check. If installation partially fails, successfully updated mods are kept and `update VERSION` can be retried without repeating a completed check.
 

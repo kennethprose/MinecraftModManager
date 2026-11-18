@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import hashlib
 import json
 import os
@@ -8,7 +9,7 @@ import sys
 import tempfile
 
 
-version = 'v261112'
+version = 'v261118'
 
 
 def get_release_asset_digest(release_tag):
@@ -244,20 +245,18 @@ def init_api_key(caller):
         sys.exit()
 
 
-def check_version_exists(version):
-
+def get_game_versions():
     valid_versions = modrinth_api_call("/tag/game_version")
 
     if not isinstance(valid_versions, list) or any(
             not isinstance(v, dict) or not isinstance(v.get("version"), str)
             for v in valid_versions):
         raise ApiError("Modrinth returned an invalid Minecraft version list")
+    return valid_versions
 
-    for v in valid_versions:
-        if v["version"] == version:
-            return True
 
-    return False
+def check_version_exists(version):
+    return any(v["version"] == version for v in get_game_versions())
 
 
 def set_server_version(version):
@@ -596,6 +595,10 @@ def check_updates(version):
     print("\nNo updates for:")
     for mod in mods_without_updates:
         print(mod)
+    if len(mods_without_updates) == 0:
+        print("None\n")
+
+    return mods_without_updates
 
 
 def has_pending_update(mod, version):
@@ -632,7 +635,7 @@ def remove_mods_without_updates(version):
         remove_mod(mod_slug)
 
 
-def update_mods(version):
+def update_mods(version, *, confirm_removal=True):
     with open("mcmm.json", "r") as file:
         data = json.load(file)
         mods = data["mods"]
@@ -660,11 +663,12 @@ def update_mods(version):
                 mod["current_version"] != version and not has_pending_update(mod, version)
                 for mod in mods):
 
-            confirmation = input(
-                f"\nMods not installed for Minecraft {version} and without pending updates for it will be removed. Do you want to proceed? (yes/no): ")
+            if confirm_removal:
+                confirmation = input(
+                    f"\nMods not installed for Minecraft {version} and without pending updates for it will be removed. Do you want to proceed? (yes/no): ")
 
-            if confirmation.lower() != "yes":
-                sys.exit()
+                if confirmation.lower() != "yes":
+                    sys.exit()
 
             remove_mods_without_updates(version)
 
@@ -741,6 +745,36 @@ def update_mods(version):
     data["server_version"] = version
     with open("mcmm.json", "w") as file:
         json.dump(data, file, indent=4)
+
+
+def update_to_latest():
+    releases = (v for v in get_game_versions() if v.get("version_type") == "release")
+    try:
+        latest = max(releases, key=lambda v: datetime.fromisoformat(v["date"].replace("Z", "+00:00")), default=None)
+    except (AttributeError, KeyError, TypeError, ValueError) as e:
+        raise ApiError("Modrinth returned an invalid Minecraft release date") from e
+    if latest is None:
+        raise ApiError("Modrinth returned no stable Minecraft releases")
+
+    version = latest["version"]
+    try:
+        confirmation = input(f"The latest stable Minecraft version is {version}. Check for mod updates and proceed? (yes/no): ")
+        if confirmation.strip().lower() != "yes":
+            return
+
+        mods_without_updates = check_updates(version)
+        if mods_without_updates:
+            confirmation = input(
+                f"Some mods have no pending update for Minecraft {version}. "
+                "Mods on a different Minecraft version without an update may be removed. "
+                "Do you still want to proceed? (yes/no): ")
+            if confirmation.strip().lower() != "yes":
+                return
+    except (EOFError, KeyboardInterrupt):
+        print("\nUpdate cancelled.")
+        return
+
+    update_mods(version, confirm_removal=not mods_without_updates)
 
 
 def list_mods():
@@ -955,7 +989,7 @@ def main():
     p.add_argument("version", nargs="?", help="Minecraft version to check (defaults to server version)")
 
     p = subparsers.add_parser("update", help="Update mods")
-    p.add_argument("version", help="Desired Minecraft version")
+    p.add_argument("version", nargs="?", help="Desired Minecraft version (defaults to the latest stable release)")
 
     p = subparsers.add_parser("remove", help="Remove mod(s)")
     p.add_argument("id_or_slug", help="IDs/slugs (comma-separated supported), or ALL to remove all mods")
@@ -998,7 +1032,10 @@ def main():
         elif args.command == "update":
             init_api_key("update")
             init_server_version()
-            update_mods(args.version)
+            if args.version is None:
+                update_to_latest()
+            else:
+                update_mods(args.version)
 
         elif args.command == "remove":
             remove_mod_wrapper(args.id_or_slug)
